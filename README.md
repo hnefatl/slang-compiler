@@ -1,5 +1,7 @@
 # SLang Compiler
 
+[![Build Status](https://travis-ci.org/hnefatl/slang-compiler.svg?branch=master)](https://travis-ci.org/hnefatl/slang-compiler)
+
 A simple compiler for the SLang language, as used in the Part 1B "Compiler Construction" module.
 
 This repository follows the standard Stack layout:
