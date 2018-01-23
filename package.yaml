@@ -16,12 +16,13 @@ synopsis:            A simple compiler for the SLang language.
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/hnefatl/compiler#readme>
+description:         Please see the README on Github at <https://github.com/hnefatl/slang-compiler#readme>
 
 dependencies:
 - base >= 4.7 && < 5
 - containers
 - vector
+- transformers
 
 library:
   source-dirs: src
@@ -37,7 +38,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Wall
     dependencies:
     - slang-compiler
 
@@ -49,7 +49,6 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Wall
     dependencies:
     - slang-compiler
     - tasty

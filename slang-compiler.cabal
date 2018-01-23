@@ -2,12 +2,12 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 87fa5787154854b487828a77f5e8a2ae2e1750ef18f5c5257b1414621de76113
+-- hash: bffd3fd9f38254069647598e66a771a4a709edc340b2770882b959b91dab121d
 
 name:           slang-compiler
 version:        0.1.0.0
 synopsis:       A simple compiler for the SLang language.
-description:    Please see the README on Github at <https://github.com/hnefatl/compiler#readme>
+description:    Please see the README on Github at <https://github.com/hnefatl/slang-compiler#readme>
 homepage:       https://github.com/hnefatl/slang-compiler#readme
 bug-reports:    https://github.com/hnefatl/slang-compiler/issues
 author:         Keith Collister
@@ -32,6 +32,7 @@ library
   build-depends:
       base >=4.7 && <5
     , containers
+    , transformers
     , vector
   exposed-modules:
       Regex.Internal.DFA
@@ -47,11 +48,12 @@ executable slang-compiler-exe
   main-is: Main.hs
   hs-source-dirs:
       app
-  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -Wall
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , containers
     , slang-compiler
+    , transformers
     , vector
   other-modules:
       Paths_slang_compiler
@@ -62,7 +64,7 @@ test-suite compiler-test
   main-is: Spec.hs
   hs-source-dirs:
       test
-  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -Wall
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , containers
@@ -70,6 +72,7 @@ test-suite compiler-test
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , transformers
     , vector
   other-modules:
       Paths_slang_compiler
