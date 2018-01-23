@@ -20,9 +20,14 @@ description:         Please see the README on Github at <https://github.com/hnef
 
 dependencies:
 - base >= 4.7 && < 5
+- containers
+- vector
 
 library:
   source-dirs: src
+
+ghc-options:
+- -Wall
 
 executables:
   slang-compiler-exe:
@@ -32,6 +37,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - slang-compiler
 
@@ -43,6 +49,7 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - slang-compiler
     - tasty
