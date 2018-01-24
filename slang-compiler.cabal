@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bffd3fd9f38254069647598e66a771a4a709edc340b2770882b959b91dab121d
+-- hash: c5cc78d7cdaf0a5892b0c098f91dcfcece0dab71b952253ad63403de6335462e
 
 name:           slang-compiler
 version:        0.1.0.0
@@ -63,7 +63,7 @@ test-suite compiler-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   hs-source-dirs:
-      test
+      tests
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -75,5 +75,7 @@ test-suite compiler-test
     , transformers
     , vector
   other-modules:
+      Test.Regex.Internal.Graph
+      Test.Regex.Internal.NFA
       Paths_slang_compiler
   default-language: Haskell2010

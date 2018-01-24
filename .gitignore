@@ -2,6 +2,3 @@
 .vscode/
 compiler.cabal
 *~
-
-build
-run
