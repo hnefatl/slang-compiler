@@ -4,6 +4,10 @@ import qualified Regex.Internal.Graph as G
 import qualified Data.Set as S
 import qualified Data.Vector as V
 import qualified Data.Map as M
+import qualified Control.Monad.Trans.State as ST
+import Data.Maybe (fromMaybe)
+import Data.List (nub)
+import Control.Monad (liftM)
 
 data NFAInput = Epsilon | Symbol Char deriving (Show, Eq)
 
@@ -15,7 +19,7 @@ instance Ord NFAInput where
 
 data NFA = NFA
     {
-        graph :: G.AdjList () NFAInput, -- In an NFA, we don't have any labels on the nodes
+        graph :: G.AdjList () NFAInput, -- Don't have labels on nodes - otherwise constructions are messy
         starts :: S.Set G.NodeIndex,
         acceptors :: S.Set G.NodeIndex
     } deriving (Show, Eq)
@@ -119,3 +123,25 @@ star n =
         g2' = G.insertEdge g2 (0, Epsilon, V.length g2 - 1)
     in
         NFA g2' s2 a2
+
+
+-- NEEDS TESTING
+-- Shouldn't be too bad to write a few unit tests
+epsilonClosure :: NFA -> V.Vector [G.NodeIndex]
+epsilonClosure (NFA g _ _) = V.fromList $ ST.evalState (mapM (epsilonClosureCalc g) [0..stateCount-1]) startState
+        where stateCount = V.length g
+              startState = (V.replicate stateCount Nothing)
+
+epsilonClosureCalc :: G.AdjList () NFAInput -> Int -> ST.State (V.Vector (Maybe [G.NodeIndex])) [G.NodeIndex]
+epsilonClosureCalc g i = do
+                    memo <- ST.gets (V.! i) -- Get the memoised state if it exists
+                    case memo of
+                        Just closure -> return closure -- Already computed
+                        Nothing -> do
+                            -- Compute the epsilon closure of all Epsilon-reachable neighbours
+                            let epsilonNeighbours = fromMaybe [] $ M.lookup Epsilon (snd $ g V.! i)
+                            closure <- liftM (nub . concat) $ mapM (epsilonClosureCalc g) epsilonNeighbours
+
+                            -- Memoise the result
+                            ST.modify $ (V.// [(i, Just closure)])
+                            return closure
