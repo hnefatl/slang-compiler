@@ -104,7 +104,7 @@ concatenate (NFA g1 s1 a1) (NFA g2 s2 a2) =
         -- Construct edges from 1st NFA's accept states to 2nd NFA's start states
         connectors = [ (s, Epsilon, d) | s <- S.toList a1, d <- S.toList s2 ]
     in
-        -- Merge 1st NFA minus with the accepting flags removed with 2nd NFA with the start flags removed,
+        -- Merge {1st NFA with the accepting flags removed} with {2nd NFA with the start flags removed},
         -- inserting the new connector edges
         mergeWithEdges (NFA g1 s1 S.empty) connectors (NFA g2 S.empty a2) []
 
@@ -134,14 +134,14 @@ epsilonClosure (NFA g _ _) = V.fromList $ ST.evalState (mapM (epsilonClosureCalc
 
 epsilonClosureCalc :: G.AdjList () NFAInput -> Int -> ST.State (V.Vector (Maybe [G.NodeIndex])) [G.NodeIndex]
 epsilonClosureCalc g i = do
-                    memo <- ST.gets (V.! i) -- Get the memoised state if it exists
-                    case memo of
-                        Just closure -> return closure -- Already computed
-                        Nothing -> do
-                            -- Compute the epsilon closure of all Epsilon-reachable neighbours
-                            let epsilonNeighbours = fromMaybe [] $ M.lookup Epsilon (snd $ g V.! i)
-                            closure <- liftM (nub . concat) $ mapM (epsilonClosureCalc g) epsilonNeighbours
+            memo <- ST.gets (V.! i) -- Get the memoised state if it exists
+            case memo of
+                Just closure -> return closure -- Already computed
+                Nothing -> do
+                    -- Compute the epsilon closure of all Epsilon-reachable neighbours
+                    let epsilonNeighbours = fromMaybe [] $ M.lookup Epsilon (snd $ g V.! i)
+                    closure <- liftM (nub . (i:) . concat) $ mapM (epsilonClosureCalc g) epsilonNeighbours
 
-                            -- Memoise the result
-                            ST.modify $ (V.// [(i, Just closure)])
-                            return closure
+                    -- Memoise the result
+                    ST.modify $ (V.// [(i, Just closure)])
+                    return closure
