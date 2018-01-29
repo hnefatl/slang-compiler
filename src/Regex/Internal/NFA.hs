@@ -5,11 +5,15 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 import qualified Data.Map as M
 import qualified Control.Monad.Trans.State as ST
+
 import Data.Maybe (fromMaybe)
 import Data.List (nub)
 import Control.Monad (liftM)
 
 data NFAInput = Epsilon | Symbol Char deriving (Show, Eq)
+
+-- Type of the adjacency lists used by NFAs. Doesn't have edges on nodes, as otherwise when we need to insert "blank" nodes stuff gets messy
+type NFAAdjList = G.AdjList () NFAInput
 
 -- Impose an ordering on NFAInputs so they can be used in Maps
 instance Ord NFAInput where
@@ -19,11 +23,14 @@ instance Ord NFAInput where
 
 data NFA = NFA
     {
-        graph :: G.AdjList () NFAInput, -- Don't have labels on nodes - otherwise constructions are messy
+        graph :: NFAAdjList,
         starts :: S.Set G.NodeIndex,
         acceptors :: S.Set G.NodeIndex
     } deriving (Show, Eq)
 
+
+possibleInputs :: NFA -> [G.NodeIndex] -> [NFAInput]
+possibleInputs (NFA g _ _) ix = nub $ concatMap (M.keys . snd) $ map (g V.!) ix
 
 -- merge puts the NFAs into the same "address space", and joins them with the given edges.
 -- The first edge list is the list of edges from the 1st NFA to the 2nd, and the 2nd list is the opposite.
@@ -37,8 +44,7 @@ mergeWithEdges (NFA g1 s1 a1) es12 (NFA g2 s2 a2) es21 =
         es = (map (\(s,x,d) -> (s,x,d + g1Length)) es12) ++ (map (\(s,x,d) -> (s + g1Length,x,d)) es21)
 
         -- Shift all the indices in the 2nd NFA's details to the position of its nodes in the appended array        
-        g2' = V.map (\(node, neighbours) -> (node, M.map (map (+ g1Length)) neighbours)) g2
-        gr = G.insertEdges (g1 V.++ g2') es -- Add the extra edges
+        gr = G.insertEdges (G.merge [g1, g2]) es -- Add the extra edges
         st = S.union s1 $ S.map (+ g1Length) s2
         ac = S.union a1 $ S.map (+ g1Length) a2
     in
@@ -119,7 +125,7 @@ star n =
         g1' = G.insertEdge g1 (V.length g1 - 1, Epsilon, 0)
 
         -- Add the outer start/accept states and the edge between them
-        (NFA g2 s2 a2) = addAcceptor $ addStart (NFA g1' s1 a1)
+        NFA g2 s2 a2 = addAcceptor $ addStart (NFA g1' s1 a1)
         g2' = G.insertEdge g2 (0, Epsilon, V.length g2 - 1)
     in
         NFA g2' s2 a2
@@ -130,9 +136,11 @@ star n =
 epsilonClosure :: NFA -> V.Vector [G.NodeIndex]
 epsilonClosure (NFA g _ _) = V.fromList $ ST.evalState (mapM (epsilonClosureCalc g) [0..stateCount-1]) startState
         where stateCount = V.length g
-              startState = (V.replicate stateCount Nothing)
+              startState = V.replicate stateCount Nothing
 
-epsilonClosureCalc :: G.AdjList () NFAInput -> Int -> ST.State (V.Vector (Maybe [G.NodeIndex])) [G.NodeIndex]
+type MemoState = V.Vector (Maybe [G.NodeIndex])
+            
+epsilonClosureCalc :: NFAAdjList -> G.NodeIndex -> ST.State MemoState [G.NodeIndex]
 epsilonClosureCalc g i = do
             memo <- ST.gets (V.! i) -- Get the memoised state if it exists
             case memo of

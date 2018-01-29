@@ -31,7 +31,6 @@ buildGraph nodes edges = V.fromList elements
               --getAdjacent i = M.fromList $ map ($ groupBy (\a b -> fst a == fst b) $ map arcInfo $ filter ((== i) . srcNode) edges
               getAdjacent i = foldl' inserter M.empty $ map arcInfo $ filter ((== i) . srcNode) edges
 
-              inserter :: M.Map b [NodeIndex] -> (b, NodeIndex) -> M.Map b [NodeIndex]
               inserter m (k, v) = M.insertWith (++) k [v] m
 
 insertEdge :: Ord b => AdjList a b -> Edge b -> AdjList a b
@@ -43,3 +42,8 @@ insertEdges = foldl' insertEdge
 -- Helper function - update a value at a given index in a vector
 vectorUpdate :: (a -> a) -> Int -> V.Vector a -> V.Vector a
 vectorUpdate f i v = v V.// [(i, f $ v V.! i)]
+
+merge :: [AdjList a b] -> AdjList a b
+merge gs = V.concat $ map movePointers withLengths
+    where withLengths = zip gs (scanl (+) 0 $ map V.length gs)
+          movePointers (g, l) = V.map (\(node, neighbours) -> (node, M.map (map (+l)) neighbours)) g
