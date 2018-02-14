@@ -1,17 +1,19 @@
 {
 module Lexer.Lexer
 (
-    Token(..),
     tokenise,
-    capitalise,
-    main
+    tokenise',
+    makeTokenPosition,
+    makeConstTokenPosition
 ) where
 
 import Data.Char (toLower, toUpper)
+
+import Lexer.Tokens
 }
 
 
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -23,121 +25,79 @@ $alpha = [a-zA-Z]
 tokens :-
     @whitespace         ;  -- Skip whitespace
     
-    "("                 { \_ -> LParen }
-    ")"                 { \_ -> RParen }
-    ","                 { \_ -> Comma }
-    ";"                 { \_ -> Semicolon }
-    ":"                 { \_ -> Colon }
+    "("                 { makeConstTokenPosition LParen }
+    ")"                 { makeConstTokenPosition RParen }
+    ","                 { makeConstTokenPosition Comma }
+    ";"                 { makeConstTokenPosition Semicolon }
+    ":"                 { makeConstTokenPosition Colon }
 
-    "+"                 { \_ -> Add }
-    "-"                 { \_ -> Sub }
-    "*"                 { \_ -> Mult }
-    "/"                 { \_ -> Div }
+    "+"                 { makeConstTokenPosition Add }
+    "-"                 { makeConstTokenPosition Sub }
+    "*"                 { makeConstTokenPosition Mult }
+    "/"                 { makeConstTokenPosition Div }
     
-    "="                 { \_ -> Equal }
-    "<"                 { \_ -> Less }
-    "~"                 { \_ -> Not }
-    "&&"                { \_ -> And}
-    "||"                { \_ -> Or}
+    "="                 { makeConstTokenPosition Equal }
+    "<"                 { makeConstTokenPosition Less }
+    "~"                 { makeConstTokenPosition Not }
+    "&&"                { makeConstTokenPosition And}
+    "||"                { makeConstTokenPosition Or}
 
-    "|"                 { \_ -> Pipe }
-    "->"                { \_ -> Arrow }
+    "|"                 { makeConstTokenPosition Pipe }
+    "->"                { makeConstTokenPosition Arrow }
 
-    "ref"               { \_ -> Ref }
-    ":="                { \_ -> Assign }
-    "!"                 { \_ -> Deref }
+    "ref"               { makeConstTokenPosition Ref }
+    ":="                { makeConstTokenPosition Assign }
+    "!"                 { makeConstTokenPosition Deref }
 
-    "inl"               { \_ -> Inl }
-    "inr"               { \_ -> Inr }
-    "case"              { \_ -> Case }
-    "of"                { \_ -> Of }
+    "inl"               { makeConstTokenPosition Inl }
+    "inr"               { makeConstTokenPosition Inr }
+    "case"              { makeConstTokenPosition Case }
+    "of"                { makeConstTokenPosition Of }
 
-    "fst"               { \_ -> Fst }
-    "snd"               { \_ -> Snd }
+    "fst"               { makeConstTokenPosition Fst }
+    "snd"               { makeConstTokenPosition Snd }
 
-    "if"                { \_ -> If }
-    "then"              { \_ -> Then }
-    "else"              { \_ -> Else }
+    "if"                { makeConstTokenPosition If }
+    "then"              { makeConstTokenPosition Then }
+    "else"              { makeConstTokenPosition Else }
 
-    "let"               { \_ -> Let }
-    "in"                { \_ -> In }
+    "let"               { makeConstTokenPosition Let }
+    "in"                { makeConstTokenPosition In }
 
-    "fun"               { \_ -> Fun }
+    "fun"               { makeConstTokenPosition Fun }
 
-    "begin"             { \_ -> Begin }
-    "end"               { \_ -> End }
+    "begin"             { makeConstTokenPosition Begin }
+    "end"               { makeConstTokenPosition End }
 
-    "while"             { \_ -> While }
-    "do"                { \_ -> Do }
+    "while"             { makeConstTokenPosition While }
+    "do"                { makeConstTokenPosition Do }
 
-    "()"                { \_ -> Unit }
-    @integer            { \s -> Integer (read s) }
-    @boolean            { \b -> Boolean (read $ capitalise b) }
+    "()"                { makeConstTokenPosition Unit }
+    @integer            { makeTokenPosition (Integer . read) }
+    @boolean            { makeTokenPosition (Boolean . read . capitalise) }
 
-    "?"                 { \_ -> Input }
+    "?"                 { makeConstTokenPosition Input }
 
 
 {
-data Token  = LParen
-            | RParen
-            | Comma
-            | Colon
-            | Semicolon
 
-            | Add
-            | Sub
-            | Mult
-            | Div
+-- Converts a AlexPosn (token position) and a string into a Position (our representation of a position) and a Token
+makeTokenPosition :: (String -> Token) -> (AlexPosn -> String -> TokenPosition)
+makeTokenPosition f (AlexPn _ l c) s = (f s, (l, c))
 
-            | Equal
-            | Less
-            | Not
-            | And
-            | Or
-            
-            | Pipe
-            | Arrow
-
-            | Ref
-            | Assign
-            | Deref
-
-            | Inl
-            | Inr
-            | Case
-            | Of
-
-            | Fst
-            | Snd
-
-            | If
-            | Then
-            | Else
-
-            | Let
-            | In
-
-            | Fun
-
-            | Begin
-            | End
-
-            | While
-            | Do
-
-            | Unit
-            | Integer Integer
-            | Boolean Bool
-
-            | Input
-            deriving (Eq, Show)
+-- Creates a TokenPosition using a constant token
+makeConstTokenPosition :: Token -> (AlexPosn -> String -> TokenPosition)
+makeConstTokenPosition t = makeTokenPosition (const t)
 
 capitalise :: String -> String
 capitalise "" = ""
 capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
-tokenise :: String -> [Token]
+tokenise :: String -> [TokenPosition]
 tokenise = alexScanTokens
+
+tokenise' :: String -> [Token]
+tokenise' = map token . tokenise
 
 main :: IO ()
 main = do
