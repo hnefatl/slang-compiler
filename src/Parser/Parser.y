@@ -1,8 +1,7 @@
 {
 module Parser.Parser
 (
-    parse,
-    parseString
+    parse
 ) where
 
 import Lexer.Lexer
@@ -12,9 +11,11 @@ import Parser.Types
 import Parser.Expressions
 }
 
-%name parseInternal
-%tokentype { L.TokenPosition }
+%name slangParse
+%tokentype { Token }
 %error { parseError }
+%monad { Alex }
+%lexer { lexerWrapper } { (L.EOF, _) }
 
 %token
     '('         { (L.LParen, _) }
@@ -25,29 +26,37 @@ import Parser.Expressions
     '*'         { (L.Mult, _) }
     '/'         { (L.Div, _) }
 
+    not         { (L.Not, _) }
+
+    unit        { (L.Unit, _) }
+    integer     { (L.Integer $$, _) }
+
 %left '+' '-'
 %left '*' '/'
 
 %%
 
-ExprPos : ExprPos '+' ExprPos        { (BinaryOp Add (expr $1) (expr $3), pos $1) }
-        | ExprPos '-' ExprPos        { (BinaryOp Sub (expr $1) (expr $3), pos $1) }
-        | ExprPos '*' ExprPos        { (BinaryOp Mul (expr $1) (expr $3), pos $1) }
-        | ExprPos '/' ExprPos        { (BinaryOp Div (expr $1) (expr $3), pos $1) }
+Expr    : Expr '+' Expr             { BinaryOp Add $1 $3 }
+        | Expr '-' Expr             { BinaryOp Sub $1 $3 }
+        | Expr '*' Expr             { BinaryOp Mul $1 $3 }
+        | Expr '/' Expr             { BinaryOp Div $1 $3 }
+        | SimpleExpr                { SimpleExpr $1 }
+
+SimpleExpr  : unit                  { Unit }
+            | integer               { Integer $1 }
+
+UOp : not       {  }
 
 
 {
-parseError :: [L.TokenPosition] -> a
-parseError ts = error $ "Parse Error: " ++ show ts
+parseError :: Token -> Alex a
+parseError ts = alexError $ "Parse Error: " ++ show ts
     
-parse :: [L.TokenPosition] -> ExprPos
-parse = parseInternal
-
-parseString :: String -> ExprPos
-parseString = parse . tokenise
-
-main :: IO ()
-main = do
-    c <- getContents
-    print $ parse $ tokenise c
+lexerWrapper :: (Token -> Alex a) -> Alex a
+lexerWrapper f = do
+        token <- alexMonadScan
+        f token
+    
+parse :: String -> Either String Expr
+parse s = runAlex s slangParse
 }

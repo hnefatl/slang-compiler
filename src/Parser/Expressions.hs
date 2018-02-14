@@ -1,16 +1,13 @@
-module Parser.Expressions 
+module Parser.Expressions
 (
     UOp(..),
     BOp(..),
     Variable,
-    ExprPos,
-    pos,
-    expr,
+    SimpleExpr(..),
     Expr(..)
 ) where
 
 import Parser.Types
-import Lexer.Tokens (Position)
 
 data UOp = Not | Neg deriving (Eq, Show)
 data BOp = Add | Sub | Mul | Div | And | Or | Less | Equal deriving (Eq, Show)
@@ -21,13 +18,10 @@ type Variable = String
 -- take an extra argument
 data Lambda = Lambda Variable Type Expr deriving (Eq, Show)
 
-type ExprPos = (Expr, Position)
-
-pos :: ExprPos -> Position
-pos = snd
-
-expr :: ExprPos -> Expr
-expr = fst
+data SimpleExpr = Unit
+                | Integer Integer
+                | Boolean Bool
+                deriving (Eq, Show)
 
 data Expr   = UnaryOp UOp Expr
             | BinaryOp BOp Expr Expr
@@ -57,7 +51,5 @@ data Expr   = UnaryOp UOp Expr
             | Fn Lambda
             | Apply Lambda Expr
 
-            | Unit 
-            | Integer Integer
-            | Boolean Bool
+            | SimpleExpr SimpleExpr
             deriving (Eq, Show)

@@ -1,76 +1,60 @@
 module Lexer.Tokens
 (
-    Line,
-    Column,
-    Position,
-    TokenPosition,
-    token,
-    pos,
-    Token(..)
+    TokenClass(..)
 ) where
 
-type Line = Int
-type Column = Int
-type Position = (Line, Column)
+data TokenClass = LParen
+                | RParen
+                | Comma
+                | Colon
+                | Semicolon
 
-type TokenPosition = (Token, Position)
+                | Add
+                | Sub
+                | Mult
+                | Div
 
-token :: TokenPosition -> Token
-token = fst
-
-pos :: TokenPosition -> Position
-pos = snd
-
-data Token  = LParen
-            | RParen
-            | Comma
-            | Colon
-            | Semicolon
-
-            | Add
-            | Sub
-            | Mult
-            | Div
-
-            | Equal
-            | Less
-            | Not
-            | And
-            | Or
+                | Equal
+                | Less
+                | Not
+                | And
+                | Or
             
-            | Pipe
-            | Arrow
+                | Pipe
+                | Arrow
 
-            | Ref
-            | Assign
-            | Deref
+                | Ref
+                | Assign
+                | Deref
 
-            | Inl
-            | Inr
-            | Case
-            | Of
+                | Inl
+                | Inr
+                | Case
+                | Of
 
-            | Fst
-            | Snd
+                | Fst
+                | Snd
 
-            | If
-            | Then
-            | Else
+                | If
+                | Then
+                | Else
 
-            | Let
-            | In
+                | Let
+                | In
 
-            | Fun
+                | Fun
 
-            | Begin
-            | End
+                | Begin
+                | End
 
-            | While
-            | Do
+                | While
+                | Do
 
-            | Unit
-            | Integer Integer
-            | Boolean Bool
+                | Unit
+                | Integer Integer
+                | Boolean Bool
 
-            | Input
-            deriving (Eq, Show)
+                | Input
+
+                | EOF
+                deriving (Eq, Show)

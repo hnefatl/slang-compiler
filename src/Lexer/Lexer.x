@@ -1,10 +1,12 @@
 {
 module Lexer.Lexer
 (
-    tokenise,
-    tokenise',
-    makeTokenPosition,
-    makeConstTokenPosition
+    Alex(..),
+    alexMonadScan,
+    runAlex,
+    alexEOF,
+    alexError,
+    Token
 ) where
 
 import Data.Char (toLower, toUpper)
@@ -13,7 +15,7 @@ import Lexer.Tokens
 }
 
 
-%wrapper "posn"
+%wrapper "monad"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -25,82 +27,81 @@ $alpha = [a-zA-Z]
 tokens :-
     @whitespace         ;  -- Skip whitespace
     
-    "("                 { makeConstTokenPosition LParen }
-    ")"                 { makeConstTokenPosition RParen }
-    ","                 { makeConstTokenPosition Comma }
-    ";"                 { makeConstTokenPosition Semicolon }
-    ":"                 { makeConstTokenPosition Colon }
+    "("                 { makeConstAlexToken LParen }
+    ")"                 { makeConstAlexToken RParen }
+    ","                 { makeConstAlexToken Comma }
+    ";"                 { makeConstAlexToken Semicolon }
+    ":"                 { makeConstAlexToken Colon }
 
-    "+"                 { makeConstTokenPosition Add }
-    "-"                 { makeConstTokenPosition Sub }
-    "*"                 { makeConstTokenPosition Mult }
-    "/"                 { makeConstTokenPosition Div }
+    "+"                 { makeConstAlexToken Add }
+    "-"                 { makeConstAlexToken Sub }
+    "*"                 { makeConstAlexToken Mult }
+    "/"                 { makeConstAlexToken Div }
     
-    "="                 { makeConstTokenPosition Equal }
-    "<"                 { makeConstTokenPosition Less }
-    "~"                 { makeConstTokenPosition Not }
-    "&&"                { makeConstTokenPosition And}
-    "||"                { makeConstTokenPosition Or}
+    "="                 { makeConstAlexToken Equal }
+    "<"                 { makeConstAlexToken Less }
+    "~"                 { makeConstAlexToken Not }
+    "&&"                { makeConstAlexToken And}
+    "||"                { makeConstAlexToken Or}
 
-    "|"                 { makeConstTokenPosition Pipe }
-    "->"                { makeConstTokenPosition Arrow }
+    "|"                 { makeConstAlexToken Pipe }
+    "->"                { makeConstAlexToken Arrow }
 
-    "ref"               { makeConstTokenPosition Ref }
-    ":="                { makeConstTokenPosition Assign }
-    "!"                 { makeConstTokenPosition Deref }
+    "ref"               { makeConstAlexToken Ref }
+    ":="                { makeConstAlexToken Assign }
+    "!"                 { makeConstAlexToken Deref }
 
-    "inl"               { makeConstTokenPosition Inl }
-    "inr"               { makeConstTokenPosition Inr }
-    "case"              { makeConstTokenPosition Case }
-    "of"                { makeConstTokenPosition Of }
+    "inl"               { makeConstAlexToken Inl }
+    "inr"               { makeConstAlexToken Inr }
+    "case"              { makeConstAlexToken Case }
+    "of"                { makeConstAlexToken Of }
 
-    "fst"               { makeConstTokenPosition Fst }
-    "snd"               { makeConstTokenPosition Snd }
+    "fst"               { makeConstAlexToken Fst }
+    "snd"               { makeConstAlexToken Snd }
 
-    "if"                { makeConstTokenPosition If }
-    "then"              { makeConstTokenPosition Then }
-    "else"              { makeConstTokenPosition Else }
+    "if"                { makeConstAlexToken If }
+    "then"              { makeConstAlexToken Then }
+    "else"              { makeConstAlexToken Else }
 
-    "let"               { makeConstTokenPosition Let }
-    "in"                { makeConstTokenPosition In }
+    "let"               { makeConstAlexToken Let }
+    "in"                { makeConstAlexToken In }
 
-    "fun"               { makeConstTokenPosition Fun }
+    "fun"               { makeConstAlexToken Fun }
 
-    "begin"             { makeConstTokenPosition Begin }
-    "end"               { makeConstTokenPosition End }
+    "begin"             { makeConstAlexToken Begin }
+    "end"               { makeConstAlexToken End }
 
-    "while"             { makeConstTokenPosition While }
-    "do"                { makeConstTokenPosition Do }
+    "while"             { makeConstAlexToken While }
+    "do"                { makeConstAlexToken Do }
 
-    "()"                { makeConstTokenPosition Unit }
-    @integer            { makeTokenPosition (Integer . read) }
-    @boolean            { makeTokenPosition (Boolean . read . capitalise) }
+    "()"                { makeConstAlexToken Unit }
+    @integer            { makeAlexToken (Integer . read) }
+    @boolean            { makeAlexToken (Boolean . read . capitalise) }
 
-    "?"                 { makeConstTokenPosition Input }
+    "?"                 { makeConstAlexToken Input }
 
 
 {
 
--- Converts a AlexPosn (token position) and a string into a Position (our representation of a position) and a Token
-makeTokenPosition :: (String -> Token) -> (AlexPosn -> String -> TokenPosition)
-makeTokenPosition f (AlexPn _ l c) s = (f s, (l, c))
+-- Construct a token in the Alex monad given a function to convert an input to a token
+makeAlexToken :: (String -> TokenClass) -> AlexInput -> Int -> Alex Token
+makeAlexToken f (p, _, _, s) len = return (f $ take len s, p)
 
--- Creates a TokenPosition using a constant token
-makeConstTokenPosition :: Token -> (AlexPosn -> String -> TokenPosition)
-makeConstTokenPosition t = makeTokenPosition (const t)
+-- Construct a token in the Alex monad given a constant token
+makeConstAlexToken :: TokenClass -> AlexInput -> Int -> Alex Token
+makeConstAlexToken t = makeAlexToken (const t)
+
+type Token = (TokenClass, AlexPosn)
+
+alexEOF :: Alex Token
+alexEOF = do
+    (pos, _, _, _) <- alexGetInput
+    return (EOF, pos)
 
 capitalise :: String -> String
 capitalise "" = ""
 capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
-tokenise :: String -> [TokenPosition]
-tokenise = alexScanTokens
-
-tokenise' :: String -> [Token]
-tokenise' = map token . tokenise
-
-main :: IO ()
-main = do
-    c <- getContents
-    print $ tokenise c
+lex :: String -> Either String Token
+lex s = runAlex s alexMonadScan
 }
