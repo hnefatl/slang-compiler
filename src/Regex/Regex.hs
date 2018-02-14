@@ -1,4 +1,0 @@
-module Regex.Regex
-(
-
-) where
