@@ -8,6 +8,12 @@ copyright:           "2018 Keith Collister"
 
 extra-source-files:
 - README.md
+- "**/*.x"
+- "**/*.y"
+
+build-tools:
+- alex
+- happy
 
 # Metadata used when publishing your package
 synopsis:            A simple compiler for the SLang language.
@@ -20,12 +26,13 @@ description:         Please see the README on Github at <https://github.com/hnef
 
 dependencies:
 - base >= 4.7 && < 5
-- containers
-- vector
 - transformers
+- array
 
 library:
   source-dirs: src
+  exposed-modules:
+  - Lexer.Lexer
 
 ghc-options:
 - -Wall
@@ -54,4 +61,3 @@ tests:
     - tasty
     - tasty-hunit
     - tasty-quickcheck
-    - vector
