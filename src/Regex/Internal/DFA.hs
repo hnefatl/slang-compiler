@@ -50,19 +50,21 @@ convertCalc :: NFALookup -> DFAState -> ST.State (M.Map DFAState G.NodeIndex, DF
 convertCalc nfas state = do
         let inputs = possibleInputs nfas state
             
-        neighbourTransitions <- forM inputs $ \input -> do
+        neighbourIndices <- forM inputs $ \input -> do
                                     let newState = nextState nfas state input
                                     index <- addState newState
-                                    return (convertInput input, [index])
+                                    return index
 
         -- Update the pointers from this state to its neighbours
         (stateMap, states) <- ST.get
-        let index = fromJust $ M.lookup state stateMap
+        let neighbourTransitions = zip (map convertInput inputs) (map (:[]) neighbourIndices)
+            index = fromJust $ M.lookup state stateMap
             (node, _) = states V.! index
             newNode = (node, M.fromList neighbourTransitions)
             newStates = states V.// [(index, newNode)]
 
         ST.put (stateMap, newStates)
+        sequence_ $ map (convertCalc nfas . G.nodeLabel . fst . (newStates V.!)) neighbourIndices
 
 
 addState :: DFAState -> ST.State (M.Map DFAState G.NodeIndex, DFAAdjList) G.NodeIndex

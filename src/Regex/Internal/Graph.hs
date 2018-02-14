@@ -7,6 +7,9 @@ import qualified Data.Vector as V
 import Data.List (foldl')
 
 data Node a = Node a deriving (Show, Eq)
+nodeLabel :: Node a -> a
+nodeLabel (Node x) = x
+
 type NodeIndex = Int
 type Edge a = (NodeIndex, a, NodeIndex)
 
