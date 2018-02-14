@@ -6,10 +6,13 @@ module Lexer.Lexer
     runAlex,
     alexEOF,
     alexError,
-    Token
+    Token,
+    tokenise,
+    tokenise'
 ) where
 
 import Data.Char (toLower, toUpper)
+import Data.Either (either)
 
 import Lexer.Tokens
 }
@@ -102,6 +105,9 @@ capitalise :: String -> String
 capitalise "" = ""
 capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
-lex :: String -> Either String Token
-lex s = runAlex s alexMonadScan
+tokenise :: String -> Either String Token
+tokenise s = runAlex s alexMonadScan
+
+tokenise' :: String -> Maybe TokenClass
+tokenise' = either (const Nothing) (Just . fst) . tokenise
 }

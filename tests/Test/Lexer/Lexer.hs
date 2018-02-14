@@ -10,55 +10,55 @@ import Lexer.Tokens
 lexerTests :: TestTree
 lexerTests = testGroup "Lexer" $
     [
-        testCase "LParen" $ tokenise' "(" @?= [LParen],
-        testCase "RParen" $ tokenise' ")" @?= [RParen],
-        testCase "Comma" $ tokenise' "," @?= [Comma],
-        testCase "Colon" $ tokenise' ":" @?= [Colon],
-        testCase "Semicolon" $ tokenise' ";" @?= [Semicolon],
+        testCase "LParen" $ tokenise' "(" @?= Just LParen,
+        testCase "RParen" $ tokenise' ")" @?= Just RParen,
+        testCase "Comma" $ tokenise' "," @?= Just Comma,
+        testCase "Colon" $ tokenise' ":" @?= Just Colon,
+        testCase "Semicolon" $ tokenise' ";" @?= Just Semicolon,
 
-        testCase "Add" $ tokenise' "+" @?= [Add],
-        testCase "Sub" $ tokenise' "-" @?= [Sub],
-        testCase "Mult" $ tokenise' "*" @?= [Mult],
-        testCase "Div" $ tokenise' "/" @?= [Div],
+        testCase "Add" $ tokenise' "+" @?= Just Add,
+        testCase "Sub" $ tokenise' "-" @?= Just Sub,
+        testCase "Mult" $ tokenise' "*" @?= Just Mult,
+        testCase "Div" $ tokenise' "/" @?= Just Div,
         
-        testCase "Equal" $ tokenise' "=" @?= [Equal],
-        testCase "Less" $ tokenise' "<" @?= [Less],
-        testCase "Not" $ tokenise' "~" @?= [Not],
-        testCase "And" $ tokenise' "&&" @?= [And],
-        testCase "Or" $ tokenise' "||" @?= [Or],
+        testCase "Equal" $ tokenise' "=" @?= Just Equal,
+        testCase "Less" $ tokenise' "<" @?= Just Less,
+        testCase "Not" $ tokenise' "~" @?= Just Not,
+        testCase "And" $ tokenise' "&&" @?= Just And,
+        testCase "Or" $ tokenise' "||" @?= Just Or,
 
-        testCase "Pipe" $ tokenise' "|" @?= [Pipe],
-        testCase "Arrow" $ tokenise' "->" @?= [Arrow],
+        testCase "Pipe" $ tokenise' "|" @?= Just Pipe,
+        testCase "Arrow" $ tokenise' "->" @?= Just Arrow,
         
-        testCase "Ref" $ tokenise' "ref" @?= [Ref],
-        testCase "Assign" $ tokenise' ":=" @?= [Assign],
-        testCase "Deref" $ tokenise' "!" @?= [Deref],
+        testCase "Ref" $ tokenise' "ref" @?= Just Ref,
+        testCase "Assign" $ tokenise' ":=" @?= Just Assign,
+        testCase "Deref" $ tokenise' "!" @?= Just Deref,
 
-        testCase "Inl" $ tokenise' "inl" @?= [Inl],
-        testCase "Inr" $ tokenise' "inr" @?= [Inr],
-        testCase "Case" $ tokenise' "case" @?= [Case],
-        testCase "Of" $ tokenise' "of" @?= [Of],
+        testCase "Inl" $ tokenise' "inl" @?= Just Inl,
+        testCase "Inr" $ tokenise' "inr" @?= Just Inr,
+        testCase "Case" $ tokenise' "case" @?= Just Case,
+        testCase "Of" $ tokenise' "of" @?= Just Of,
 
-        testCase "Fst" $ tokenise' "fst" @?= [Fst],
-        testCase "Snd" $ tokenise' "snd" @?= [Snd],
+        testCase "Fst" $ tokenise' "fst" @?= Just Fst,
+        testCase "Snd" $ tokenise' "snd" @?= Just Snd,
 
-        testCase "If" $ tokenise' "if" @?= [If],
-        testCase "Then" $ tokenise' "then" @?= [Then],
-        testCase "Else" $ tokenise' "else" @?= [Else],
+        testCase "If" $ tokenise' "if" @?= Just If,
+        testCase "Then" $ tokenise' "then" @?= Just Then,
+        testCase "Else" $ tokenise' "else" @?= Just Else,
         
-        testCase "Let" $ tokenise' "let" @?= [Let],
-        testCase "In" $ tokenise' "in" @?= [In],
+        testCase "Let" $ tokenise' "let" @?= Just Let,
+        testCase "In" $ tokenise' "in" @?= Just In,
 
-        testCase "Fun" $ tokenise' "fun" @?= [Fun],
+        testCase "Fun" $ tokenise' "fun" @?= Just Fun,
 
-        testCase "Begin" $ tokenise' "begin" @?= [Begin],
-        testCase "End" $ tokenise' "end" @?= [End],
+        testCase "Begin" $ tokenise' "begin" @?= Just Begin,
+        testCase "End" $ tokenise' "end" @?= Just End,
 
-        testCase "While" $ tokenise' "while" @?= [While],
-        testCase "Do" $ tokenise' "do" @?= [Do],
+        testCase "While" $ tokenise' "while" @?= Just While,
+        testCase "Do" $ tokenise' "do" @?= Just Do,
 
-        testCase "Unit" $ tokenise' "()" @?= [Unit],
-        testProperty "Integer" (\i -> tokenise' (show i) == [Integer i]),
-        testCase "Boolean True" $ tokenise' "true" @?= [Boolean True],
-        testCase "Boolean False" $ tokenise' "false" @?= [Boolean False]
+        testCase "Unit" $ tokenise' "()" @?= Just Unit,
+        testProperty "Integer" (\i -> tokenise' (show i) == Just (Integer i)),
+        testCase "Boolean True" $ tokenise' "true" @?= Just (Boolean True),
+        testCase "Boolean False" $ tokenise' "false" @?= Just (Boolean False)
     ]
