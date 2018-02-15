@@ -55,6 +55,11 @@ data TokenClass = LParen
                 | Boolean Bool
 
                 | Input
+                | Identifier String
+
+                | IntType
+                | BoolType
+                | UnitType
 
                 | EOF
                 deriving (Eq, Show)

@@ -3,14 +3,15 @@ module Parser.Expressions
     UOp(..),
     BOp(..),
     Variable,
+    Lambda(..),
     SimpleExpr(..),
     Expr(..)
 ) where
 
 import Parser.Types
 
-data UOp = Not | Neg deriving (Eq, Show)
-data BOp = Add | Sub | Mul | Div | And | Or | Less | Equal deriving (Eq, Show)
+data UOp = OpNot | OpNeg deriving (Eq, Show)
+data BOp = OpAdd | OpSub | OpMul | OpDiv | OpAnd | OpOr | OpLess | OpEqual | OpAssign deriving (Eq, Show)
 
 type Variable = String
 
@@ -21,6 +22,12 @@ data Lambda = Lambda Variable Type Expr deriving (Eq, Show)
 data SimpleExpr = Unit
                 | Integer Integer
                 | Boolean Bool
+                | Identifier String
+                | Not SimpleExpr
+                | Deref SimpleExpr
+                | Ref SimpleExpr
+                | Pair Expr Expr
+                | Expr Expr
                 deriving (Eq, Show)
 
 data Expr   = UnaryOp UOp Expr
@@ -30,26 +37,23 @@ data Expr   = UnaryOp UOp Expr
 
             | If Expr Expr Expr
 
-            | Ref Expr
             | Assign Expr Expr
-            | Deref Expr
 
             | Inl Expr
             | Inr Expr
             | Case Expr Lambda Lambda
 
-            | Pair Expr Expr
             | Fst Expr
             | Snd Expr
 
             | While Expr Expr
 
             | Let Variable Type Expr Expr
-            | LetFun Variable Type Lambda Expr
-            | LetRecFun Variable Type Lambda Expr
+            | LetFun Variable Lambda Type Expr
+            | LetRecFun Variable Lambda Type Expr
 
-            | Fn Lambda
-            | Apply Lambda Expr
+            | Fun Lambda
+            | Apply Expr SimpleExpr
 
             | SimpleExpr SimpleExpr
             deriving (Eq, Show)

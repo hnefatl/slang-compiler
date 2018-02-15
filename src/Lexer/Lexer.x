@@ -14,7 +14,7 @@ module Lexer.Lexer
 import Data.Char (toLower, toUpper)
 import Data.Either (either)
 
-import Lexer.Tokens
+import qualified Lexer.Tokens as T
 }
 
 
@@ -26,80 +26,86 @@ $alpha = [a-zA-Z]
 @whitespace = $white+
 @integer = "-"? $digit+
 @boolean = (true) | (false)
+@identifier = $alpha [$alpha $digit \']*
 
 tokens :-
     @whitespace         ;  -- Skip whitespace
     
-    "("                 { makeConstAlexToken LParen }
-    ")"                 { makeConstAlexToken RParen }
-    ","                 { makeConstAlexToken Comma }
-    ";"                 { makeConstAlexToken Semicolon }
-    ":"                 { makeConstAlexToken Colon }
+    "("                 { makeConstAlexToken T.LParen }
+    ")"                 { makeConstAlexToken T.RParen }
+    ","                 { makeConstAlexToken T.Comma }
+    ";"                 { makeConstAlexToken T.Semicolon }
+    ":"                 { makeConstAlexToken T.Colon }
 
-    "+"                 { makeConstAlexToken Add }
-    "-"                 { makeConstAlexToken Sub }
-    "*"                 { makeConstAlexToken Mult }
-    "/"                 { makeConstAlexToken Div }
+    "+"                 { makeConstAlexToken T.Add }
+    "-"                 { makeConstAlexToken T.Sub }
+    "*"                 { makeConstAlexToken T.Mult }
+    "/"                 { makeConstAlexToken T.Div }
     
-    "="                 { makeConstAlexToken Equal }
-    "<"                 { makeConstAlexToken Less }
-    "~"                 { makeConstAlexToken Not }
-    "&&"                { makeConstAlexToken And}
-    "||"                { makeConstAlexToken Or}
+    "="                 { makeConstAlexToken T.Equal }
+    "<"                 { makeConstAlexToken T.Less }
+    "~"                 { makeConstAlexToken T.Not }
+    "&&"                { makeConstAlexToken T.And}
+    "||"                { makeConstAlexToken T.Or}
 
-    "|"                 { makeConstAlexToken Pipe }
-    "->"                { makeConstAlexToken Arrow }
+    "|"                 { makeConstAlexToken T.Pipe }
+    "->"                { makeConstAlexToken T.Arrow }
 
-    "ref"               { makeConstAlexToken Ref }
-    ":="                { makeConstAlexToken Assign }
-    "!"                 { makeConstAlexToken Deref }
+    "ref"               { makeConstAlexToken T.Ref }
+    ":="                { makeConstAlexToken T.Assign }
+    "!"                 { makeConstAlexToken T.Deref }
 
-    "inl"               { makeConstAlexToken Inl }
-    "inr"               { makeConstAlexToken Inr }
-    "case"              { makeConstAlexToken Case }
-    "of"                { makeConstAlexToken Of }
+    "inl"               { makeConstAlexToken T.Inl }
+    "inr"               { makeConstAlexToken T.Inr }
+    "case"              { makeConstAlexToken T.Case }
+    "of"                { makeConstAlexToken T.Of }
 
-    "fst"               { makeConstAlexToken Fst }
-    "snd"               { makeConstAlexToken Snd }
+    "fst"               { makeConstAlexToken T.Fst }
+    "snd"               { makeConstAlexToken T.Snd }
 
-    "if"                { makeConstAlexToken If }
-    "then"              { makeConstAlexToken Then }
-    "else"              { makeConstAlexToken Else }
+    "if"                { makeConstAlexToken T.If }
+    "then"              { makeConstAlexToken T.Then }
+    "else"              { makeConstAlexToken T.Else }
 
-    "let"               { makeConstAlexToken Let }
-    "in"                { makeConstAlexToken In }
+    "let"               { makeConstAlexToken T.Let }
+    "in"                { makeConstAlexToken T.In }
 
-    "fun"               { makeConstAlexToken Fun }
+    "fun"               { makeConstAlexToken T.Fun }
 
-    "begin"             { makeConstAlexToken Begin }
-    "end"               { makeConstAlexToken End }
+    "begin"             { makeConstAlexToken T.Begin }
+    "end"               { makeConstAlexToken T.End }
 
-    "while"             { makeConstAlexToken While }
-    "do"                { makeConstAlexToken Do }
+    "while"             { makeConstAlexToken T.While }
+    "do"                { makeConstAlexToken T.Do }
 
-    "()"                { makeConstAlexToken Unit }
-    @integer            { makeAlexToken (Integer . read) }
-    @boolean            { makeAlexToken (Boolean . read . capitalise) }
+    "()"                { makeConstAlexToken T.Unit }
+    @integer            { makeAlexToken (T.Integer . read) }
+    @boolean            { makeAlexToken (T.Boolean . read . capitalise) }
 
-    "?"                 { makeConstAlexToken Input }
+    "?"                 { makeConstAlexToken T.Input }
 
+    @identifier         { makeAlexToken T.Identifier }
+    
+    "int"               { makeConstAlexToken T.IntType }
+    "bool"              { makeConstAlexToken T.BoolType }
+    "unit"              { makeConstAlexToken T.UnitType }
 
 {
 
 -- Construct a token in the Alex monad given a function to convert an input to a token
-makeAlexToken :: (String -> TokenClass) -> AlexInput -> Int -> Alex Token
+makeAlexToken :: (String -> T.TokenClass) -> AlexInput -> Int -> Alex Token
 makeAlexToken f (p, _, _, s) len = return (f $ take len s, p)
 
 -- Construct a token in the Alex monad given a constant token
-makeConstAlexToken :: TokenClass -> AlexInput -> Int -> Alex Token
+makeConstAlexToken :: T.TokenClass -> AlexInput -> Int -> Alex Token
 makeConstAlexToken t = makeAlexToken (const t)
 
-type Token = (TokenClass, AlexPosn)
+type Token = (T.TokenClass, AlexPosn)
 
 alexEOF :: Alex Token
 alexEOF = do
     (pos, _, _, _) <- alexGetInput
-    return (EOF, pos)
+    return (T.EOF, pos)
 
 capitalise :: String -> String
 capitalise "" = ""
@@ -108,6 +114,6 @@ capitalise (c:cl) = [toUpper c] ++ map toLower cl
 tokenise :: String -> Either String Token
 tokenise s = runAlex s alexMonadScan
 
-tokenise' :: String -> Maybe TokenClass
+tokenise' :: String -> Maybe T.TokenClass
 tokenise' = either (const Nothing) (Just . fst) . tokenise
 }

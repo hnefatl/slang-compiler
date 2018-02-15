@@ -10,5 +10,5 @@ import Parser.Expressions
 parserTests :: TestTree
 parserTests = testGroup "Parser" $
     [
-        testCase "17 + 4" $ parse "17 + 4" @?= Right (BinaryOp Add (SimpleExpr $ Integer 17) (SimpleExpr $ Integer 4))
+        testCase "17 + 4" $ parse "17 + 4" @?= Right (BinaryOp OpAdd (SimpleExpr $ Integer 17) (SimpleExpr $ Integer 4))
     ]
