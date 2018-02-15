@@ -80,17 +80,28 @@ import qualified Parser.Expressions as E
     unittype    { (L.UnitType, _) }
 
 
-
-
+-- Lowest precedence
 %left '+' '-'
 %left '*' '/' '&&' '||' '=' '->' '<'
 %left ':='
 
+%nonassoc negate
+
+%nonassoc then
+%nonassoc else
+
+%nonassoc uminus
+
+%nonassoc unit integer boolean identifier '(' '~' '!' ref
+-- Highest precedence
+
 %%
 
+Expr :: { E.Expr }
 Expr    : SimpleExpr                                            { E.SimpleExpr $1 }
         | Expr SimpleExpr                                       { E.Apply $1 $2 }
-        | '-' Expr                                              { E.UnaryOp E.OpNeg $2 }
+            -- Unary negation has high precedence
+        | '-' Expr  %prec unit                                  { E.UnaryOp E.OpNeg $2 }
         | Expr '+' Expr                                         { E.BinaryOp E.OpAdd $1 $3 }
         | Expr '-' Expr                                         { E.BinaryOp E.OpSub $1 $3 }
         | Expr '*' Expr                                         { E.BinaryOp E.OpMul $1 $3 }
@@ -103,10 +114,10 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | begin ExprList end                                    { E.Sequence $2 }
         | if Expr then Expr else Expr end                       { E.If $2 $4 $6 }
         | while Expr do Expr                                    { E.While $2 $4 }
-        | fst Expr                                              { E.Fst $2 }
-        | snd Expr                                              { E.Snd $2 }
-        | inl Expr                                              { E.Inl $2 }
-        | inr Expr                                              { E.Inr $2 }
+        | fst Expr  %prec uminus                                { E.Fst $2 }
+        | snd Expr  %prec uminus                                { E.Snd $2 }
+        | inl Type Expr  %prec uminus                           { E.Inl $2 $3 }
+        | inr Type Expr  %prec uminus                           { E.Inr $2 $3 }
         | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun (E.Lambda $3 $5 $8) }
         | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
 
@@ -123,6 +134,7 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
           end                                                   { E.Case $2 (E.Lambda $15 $17 $20) (E.Lambda $6 $8 $11) }
 
 
+SimpleExpr :: { E.SimpleExpr }
 SimpleExpr  : unit                      { E.Unit }
             | integer                   { E.Integer $1 }
             | boolean                   { E.Boolean $1 }
@@ -133,11 +145,11 @@ SimpleExpr  : unit                      { E.Unit }
             | '!' SimpleExpr            { E.Deref $2 }
             | ref SimpleExpr            { E.Ref $2 }
 
-
+ExprList :: { [E.Expr] }
 ExprList    : Expr                  { [$1] }
             | Expr ';' ExprList     { $1:$3 }
 
-
+Type :: { T.Type }
 Type    : inttype           { T.Int }
         | booltype          { T.Bool }
         | unittype          { T.Unit }
