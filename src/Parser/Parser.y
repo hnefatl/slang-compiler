@@ -99,9 +99,10 @@ import qualified Parser.Expressions as E
 
 Expr :: { E.Expr }
 Expr    : SimpleExpr                                            { E.SimpleExpr $1 }
+        | '-' Expr  %prec unit                                  { E.UnaryOp E.OpNeg $2 }
+        | '~' Expr  %prec unit                                  { E.UnaryOp E.OpNot $2 }
         | Expr SimpleExpr                                       { E.Apply $1 $2 }
             -- Unary negation has high precedence
-        | '-' Expr  %prec unit                                  { E.UnaryOp E.OpNeg $2 }
         | Expr '+' Expr                                         { E.BinaryOp E.OpAdd $1 $3 }
         | Expr '-' Expr                                         { E.BinaryOp E.OpSub $1 $3 }
         | Expr '*' Expr                                         { E.BinaryOp E.OpMul $1 $3 }
@@ -135,23 +136,22 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
 
 
 SimpleExpr :: { E.SimpleExpr }
-SimpleExpr  : unit                      { E.Unit }
-            | integer                   { E.Integer $1 }
-            | boolean                   { E.Boolean $1 }
-            | identifier                { E.Identifier $1 }
-            | '(' Expr ')'              { E.Expr $2 }
-            | '(' Expr ',' Expr ')'     { E.Pair $2 $4 }
-            | '~' SimpleExpr            { E.Not $2 }
-            | '!' SimpleExpr            { E.Deref $2 }
-            | ref SimpleExpr            { E.Ref $2 }
+SimpleExpr  : unit                          { E.Unit }
+            | integer                       { E.Integer $1 }
+            | boolean                       { E.Boolean $1 }
+            | identifier                    { E.Identifier $1 }
+            | '(' Expr ')'                  { E.Expr $2 }
+            | '(' Expr ',' Expr ')'         { E.Pair $2 $4 }
+            | '!' SimpleExpr                { E.Deref $2 }
+            | ref SimpleExpr                { E.Ref $2 }
 
 ExprList :: { [E.Expr] }
 ExprList    : Expr                  { [$1] }
             | Expr ';' ExprList     { $1:$3 }
 
 Type :: { T.Type }
-Type    : inttype           { T.Int }
-        | booltype          { T.Bool }
+Type    : inttype           { T.Integer }
+        | booltype          { T.Boolean }
         | unittype          { T.Unit }
         | ref Type          { T.Ref $2 }
         | Type '->' Type    { T.Fn $1 $3 }

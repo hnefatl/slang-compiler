@@ -3,8 +3,8 @@ module Parser.Types
     Type(..)
 ) where
 
-data Type   = Int
-            | Bool
+data Type   = Integer
+            | Boolean
             | Unit
             | Ref Type
             | Fn Type Type

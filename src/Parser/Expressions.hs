@@ -23,7 +23,6 @@ data SimpleExpr = Unit
                 | Integer Integer
                 | Boolean Bool
                 | Identifier String
-                | Not SimpleExpr
                 | Deref SimpleExpr
                 | Ref SimpleExpr
                 | Pair Expr Expr

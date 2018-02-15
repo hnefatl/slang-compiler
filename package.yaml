@@ -27,6 +27,7 @@ description:         Please see the README on Github at <https://github.com/hnef
 dependencies:
 - base >= 4.7 && < 5
 - transformers
+- containers
 - array
 
 library:
