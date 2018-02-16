@@ -5,7 +5,6 @@ module Parser.Expressions
     BoolBOp(..),
     BOp(..),
     Variable,
-    Lambda(..),
     SimpleExpr(..),
     Expr(..)
 ) where
@@ -18,10 +17,6 @@ data BoolBOp = OpAnd | OpOr deriving (Eq, Show)
 data BOp = OpEqual | OpAssign deriving (Eq, Show)
 
 type Variable = String
-
--- An expression with one free variable. Used in eg. case statements where an expression is expected to
--- take an extra argument
-data Lambda = Lambda Variable Type Expr deriving (Eq, Show)
 
 data SimpleExpr = Unit
                 | Integer Integer
@@ -42,20 +37,20 @@ data Expr   = UnaryOp UOp Expr
 
             | If Expr Expr Expr
 
-            | Inl Expr Type
-            | Inr Expr Type
-            | Case Expr Lambda Lambda
+            | Inl Expr Type  -- inl 5    : int * bool
+            | Inr Expr Type  -- inr true : int * bool
+            | Case Expr Expr Expr
 
             | Fst Expr
             | Snd Expr
 
             | While Expr Expr
 
-            | Let Variable Type Expr Expr
-            | LetFun Variable Lambda Type Expr
-            | LetRecFun Variable Lambda Type Expr
+            | Let Variable Type Expr Expr  -- let (x : int) = 1 in ... end
+            | LetFun Variable Expr Type Expr  -- let f(x : int) : int = x + 1 in ... end
+            | LetRecFun Variable Expr Type Expr  -- let rec f(x : int) : int = f(x - 1) in ... end
 
-            | Fun Lambda
+            | Fun Variable Type Expr
             | Apply Expr SimpleExpr
 
             | SimpleExpr SimpleExpr

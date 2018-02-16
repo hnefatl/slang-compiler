@@ -5,44 +5,51 @@ module Parser.Types
     isBoolean,
     isUnit,
     isRef,
-    isFn,
+    isFun,
     isUnion,
     isProduct
 ) where
 
-data Type   = Integer
+data Type   = Any   -- Oooooh, the "any" type. It makes some implementation details nicer later
+            | Integer
             | Boolean
             | Unit
             | Ref Type
-            | Fn Type Type
-            | Union Type Type
-            | Product Type Type
-            deriving (Eq, Show)
+            | Fun Type Type -- Argument type, return type
+            | Union Type Type -- Left type, right type
+            | Product Type Type -- Left type, right type
+            deriving (Show)
+
+-- Ugly defn... "Any" matches any other type, the others match structurally identical types
+instance Eq Type where
+    Any == _ = True
+    _ == Any = True
+    Integer == Integer = True
+    Boolean == Boolean = True
+    Unit == Unit = True
+    Ref t1 == Ref t2 = t1 == t2
+    Fun lArg lRet == Fun rArg rRet = lArg == rArg && lRet == rRet
+    Union lLeft lRight == Union rLeft rRight = lLeft == rLeft && lRight == rRight
+    Product lLeft lRight == Product rLeft rRight = lLeft == rLeft && lRight == rRight
+    _ == _ = False
 
 isInteger :: Type -> Bool
-isInteger Integer = True
-isInteger _       = False
+isInteger = (== Integer)
 
 isBoolean :: Type -> Bool
-isBoolean Boolean = True
-isBoolean _       = False
+isBoolean = (== Boolean)
 
 isUnit :: Type -> Bool
-isUnit Unit = True
-isUnit _       = False
+isUnit = (== Unit)
 
 isRef :: Type -> Bool
-isRef (Ref _) = True
-isRef _       = False
+isRef = (== Ref Any)
 
-isFn :: Type -> Bool
-isFn (Fn _ _) = True
-isFn _        = False
+isFun :: Type -> Bool
+isFun = (== Fun Any Any)
 
 isUnion :: Type -> Bool
-isUnion (Union _ _) = True
-isUnion _           = False
+isUnion = (== Union Any Any)
 
 isProduct :: Type -> Bool
-isProduct (Product _ _) = True
-isProduct _             = False
+isProduct = (== Product Any Any)

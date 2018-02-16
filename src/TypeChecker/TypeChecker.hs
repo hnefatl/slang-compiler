@@ -7,7 +7,8 @@
 module TypeChecker.TypeChecker
 (
     inferType,
-    typecheck
+    typecheck,
+    Error
 ) where
 
 import qualified Parser.Types as T
@@ -47,21 +48,40 @@ inferType (E.Inl e (T.Union lt _))   = restrictedInfer (== lt) "Expression in in
 inferType (E.Inl _ _)                = throwE "Expected union-type in inl"
 inferType (E.Inr e (T.Union _ rt))   = restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
 inferType (E.Inr _ _)                = throwE "Expected union-type in inr"
-inferType (E.Case e (E.Lambda _ lt le) (E.Lambda _ rt re)) = do
-                                       restrictedInfer (== T.Union lt rt) "Expression in case statement must have union type matching the union of the branch argument types" inferType e
-                                       exprType <- inferType le
-                                       restrictedInfer (== exprType) "Lambda types in case statement must match" inferType re
+inferType (E.Case e fl fr)           = do   
+                                        (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
+                                        (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
+                                        restrictedInfer (== T.Fun rArg lRet) ("Expression in inr branch of case statement must have type " ++ show rArg ++ " -> " ++ show lRet) inferType fr
 inferType (E.Fst e)                  = do
-                                        (T.Product t _) <- restrictedInfer (T.isProduct) "Expression in fst statement must have product type" inferType e
+                                        (T.Product t _) <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
                                         return t
 inferType (E.Snd e)                  = do
-                                        (T.Product _ t) <- restrictedInfer (T.isProduct) "Expression in snd statement must have product type" inferType e
+                                        (T.Product _ t) <- restrictedInfer T.isProduct "Expression in snd statement must have product type" inferType e
                                         return t
 inferType (E.While e1 e2)            = do
                                         restrictedInfer (T.isBoolean) "Condition in while loop must have boolean type" inferType e1
                                         inferType e2
---inferType (E.Let v e1 e2)            = do
+inferType (E.Let v t e1 e2)          = do
+                                        restrictedInfer (== t) "Variable's initialiser must have the same type as the variable" inferType e1
+                                        inLocal (M.insert v t) (inferType e2)
+inferType (E.LetFun n f t e)         = do
+                                        fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
+                                        inLocal (M.insert n fType) (inferType e)
+--inferType (E.LetRecFun n f t e)      = do
+--                                        fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
+--                                        inLocal (M.insert n fType) (inferType e)
+inferType (E.LetRecFun _ _ _ _) = undefined
+inferType (E.Fun v t e)              = inLocal (M.insert v t) (inferType e)
+inferType (E.Apply f x)             = do
+                                        (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
+                                        restrictedInfer (== fArg) "Function applied to value of wrong type" inferTypeSimple x
+                                        return fRet
 
+
+
+-- Like "local" for Reader, but all wrapped inside the Except monad
+inLocal :: (r -> r) -> ExceptT e (Reader r) a -> ExceptT e (Reader r) a
+inLocal f x = ExceptT $ withReader f (runExceptT x)
 
 
 
@@ -90,6 +110,5 @@ restrictedInfer p err inferrer expr = do
                                 if p t then return t
                                 else throwE err
 
-
-typecheck :: E.Expr -> Maybe String
-typecheck = undefined
+typecheck :: E.Expr -> Either Error T.Type
+typecheck = (flip runReader) M.empty . runExceptT . inferType

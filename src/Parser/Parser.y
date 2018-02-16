@@ -119,20 +119,20 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | snd Expr  %prec uminus                                { E.Snd $2 }
         | inl Expr Type  %prec uminus                           { E.Inl $2 $3 }
         | inr Expr Type  %prec uminus                           { E.Inr $2 $3 }
-        | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun (E.Lambda $3 $5 $8) }
+        | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun $3 $5 $8 }
         | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
 
         | let identifier '(' identifier ':' Type ')'
-                    ':' Type '=' Expr in Expr end               { E.LetFun $2 (E.Lambda $4 $6 $11) $9 $13 }
+                    ':' Type '=' Expr in Expr end               { E.LetFun $2 (E.Fun $4 $6 $11) $9 $13 }
 
         | case Expr of
                 inl '(' identifier ':' Type ')' '->' Expr
             '|' inr '(' identifier ':' Type ')' '->' Expr
-          end                                                   { E.Case $2 (E.Lambda $6 $8 $11) (E.Lambda $15 $17 $20)}
+          end                                                   { E.Case $2 (E.Fun $6 $8 $11) (E.Fun $15 $17 $20)}
         | case Expr of
                 inr '(' identifier ':' Type ')' '->' Expr
             '|' inl '(' identifier ':' Type ')' '->' Expr
-          end                                                   { E.Case $2 (E.Lambda $15 $17 $20) (E.Lambda $6 $8 $11) }
+          end                                                   { E.Case $2 (E.Fun $15 $17 $20) (E.Fun $6 $8 $11) }
 
 
 SimpleExpr :: { E.SimpleExpr }
@@ -154,7 +154,7 @@ Type    : inttype           { T.Integer }
         | booltype          { T.Boolean }
         | unittype          { T.Unit }
         | ref Type          { T.Ref $2 }
-        | Type '->' Type    { T.Fn $1 $3 }
+        | Type '->' Type    { T.Fun $1 $3 }
         | Type '*' Type     { T.Product $1 $3 }
         | Type '+' Type     { T.Union $1 $3 }
         | '(' Type ')'      { $2 }
