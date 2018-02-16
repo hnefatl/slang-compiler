@@ -117,8 +117,8 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | while Expr do Expr                                    { E.While $2 $4 }
         | fst Expr  %prec uminus                                { E.Fst $2 }
         | snd Expr  %prec uminus                                { E.Snd $2 }
-        | inl Type Expr  %prec uminus                           { E.Inl $2 $3 }
-        | inr Type Expr  %prec uminus                           { E.Inr $2 $3 }
+        | inl Expr Type  %prec uminus                           { E.Inl $2 $3 }
+        | inr Expr Type  %prec uminus                           { E.Inr $2 $3 }
         | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun (E.Lambda $3 $5 $8) }
         | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
 

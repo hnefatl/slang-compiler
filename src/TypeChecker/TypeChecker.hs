@@ -43,10 +43,27 @@ inferType (E.If e1 e2 e3)             = do
                                         restrictedInfer T.isBoolean "Condition of if-statement is non-boolean" inferType e1
                                         tType <- inferType e2
                                         restrictedInfer (== tType) "Branches of if-statement don't have the same type" inferType e3
--- Check grammar - is the type here the type of e or "the other type"?
--- Adjust expression argument order to match if it's the other type (left/right)
---inferType (E.Inl t e)              = restrictedInfer (== t) ""
-                                        
+inferType (E.Inl e (T.Union lt _))   = restrictedInfer (== lt) "Expression in inl must match left side of union type" inferType e
+inferType (E.Inl _ _)                = throwE "Expected union-type in inl"
+inferType (E.Inr e (T.Union _ rt))   = restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
+inferType (E.Inr _ _)                = throwE "Expected union-type in inr"
+inferType (E.Case e (E.Lambda _ lt le) (E.Lambda _ rt re)) = do
+                                       restrictedInfer (== T.Union lt rt) "Expression in case statement must have union type matching the union of the branch argument types" inferType e
+                                       exprType <- inferType le
+                                       restrictedInfer (== exprType) "Lambda types in case statement must match" inferType re
+inferType (E.Fst e)                  = do
+                                        (T.Product t _) <- restrictedInfer (T.isProduct) "Expression in fst statement must have product type" inferType e
+                                        return t
+inferType (E.Snd e)                  = do
+                                        (T.Product _ t) <- restrictedInfer (T.isProduct) "Expression in snd statement must have product type" inferType e
+                                        return t
+inferType (E.While e1 e2)            = do
+                                        restrictedInfer (T.isBoolean) "Condition in while loop must have boolean type" inferType e1
+                                        inferType e2
+--inferType (E.Let v e1 e2)            = do
+
+
+
 
 inferTypeSimple :: E.SimpleExpr -> TypeChecker
 inferTypeSimple (E.Expr e) = inferType e

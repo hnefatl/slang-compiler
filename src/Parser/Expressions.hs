@@ -42,8 +42,8 @@ data Expr   = UnaryOp UOp Expr
 
             | If Expr Expr Expr
 
-            | Inl Type Expr
-            | Inr Type Expr
+            | Inl Expr Type
+            | Inr Expr Type
             | Case Expr Lambda Lambda
 
             | Fst Expr
