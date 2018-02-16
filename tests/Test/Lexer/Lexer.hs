@@ -58,7 +58,7 @@ lexerTests = testGroup "Lexer" $
         testCase "Do" $ tokenise' "do" @?= Just Do,
 
         testCase "Unit" $ tokenise' "()" @?= Just Unit,
-        testProperty "Integer" (\i -> tokenise' (show i) == Just (Integer i)),
+        testProperty "Integer" $ forAll arbitrarySizedNatural (\i -> tokenise' (show i) === Just (Integer i)),
         testCase "Boolean True" $ tokenise' "true" @?= Just (Boolean True),
         testCase "Boolean False" $ tokenise' "false" @?= Just (Boolean False)
     ]

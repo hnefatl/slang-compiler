@@ -27,7 +27,7 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 
 @whitespace = $white+
-@integer = "-"? $digit+
+@natural = $digit+
 @boolean = (true) | (false)
 @identifier = $alpha [$alpha $digit \']*
 
@@ -82,7 +82,7 @@ tokens :-
     "do"                { makeConstAlexToken T.Do }
 
     "()"                { makeConstAlexToken T.Unit }
-    @integer            { makeAlexToken (T.Integer . read) }
+    @natural            { makeAlexToken (T.Integer . read) }
     @boolean            { makeAlexToken (T.Boolean . read . capitalise) }
 
     "?"                 { makeConstAlexToken T.Input }
