@@ -1,6 +1,8 @@
 module Parser.Expressions
 (
     UOp(..),
+    ArithBOp(..),
+    BoolBOp(..),
     BOp(..),
     Variable,
     Lambda(..),
@@ -11,7 +13,9 @@ module Parser.Expressions
 import Parser.Types
 
 data UOp = OpNot | OpNeg deriving (Eq, Show)
-data BOp = OpAdd | OpSub | OpMul | OpDiv | OpAnd | OpOr | OpLess | OpEqual | OpAssign deriving (Eq, Show)
+data ArithBOp = OpAdd | OpSub | OpMul | OpDiv | OpLess deriving (Eq, Show)
+data BoolBOp = OpAnd | OpOr deriving (Eq, Show)
+data BOp = OpEqual | OpAssign deriving (Eq, Show)
 
 type Variable = String
 
@@ -30,13 +34,13 @@ data SimpleExpr = Unit
                 deriving (Eq, Show)
 
 data Expr   = UnaryOp UOp Expr
+            | ArithBinaryOp ArithBOp Expr Expr
+            | BoolBinaryOp BoolBOp Expr Expr
             | BinaryOp BOp Expr Expr
 
             | Sequence [Expr]
 
             | If Expr Expr Expr
-
-            | Assign Expr Expr
 
             | Inl Type Expr
             | Inr Type Expr

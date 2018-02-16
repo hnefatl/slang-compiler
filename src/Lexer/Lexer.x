@@ -1,4 +1,7 @@
 {
+-- If Alex includes too many modules, don't generate warnings
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
 module Lexer.Lexer
 (
     Alex(..),

@@ -103,14 +103,14 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | '~' Expr  %prec unit                                  { E.UnaryOp E.OpNot $2 }
         | Expr SimpleExpr                                       { E.Apply $1 $2 }
             -- Unary negation has high precedence
-        | Expr '+' Expr                                         { E.BinaryOp E.OpAdd $1 $3 }
-        | Expr '-' Expr                                         { E.BinaryOp E.OpSub $1 $3 }
-        | Expr '*' Expr                                         { E.BinaryOp E.OpMul $1 $3 }
-        | Expr '/' Expr                                         { E.BinaryOp E.OpDiv $1 $3 }
-        | Expr '<' Expr                                         { E.BinaryOp E.OpLess $1 $3 }
+        | Expr '+' Expr                                         { E.ArithBinaryOp E.OpAdd $1 $3 }
+        | Expr '-' Expr                                         { E.ArithBinaryOp E.OpSub $1 $3 }
+        | Expr '*' Expr                                         { E.ArithBinaryOp E.OpMul $1 $3 }
+        | Expr '/' Expr                                         { E.ArithBinaryOp E.OpDiv $1 $3 }
+        | Expr '<' Expr                                         { E.ArithBinaryOp E.OpLess $1 $3 }
         | Expr '=' Expr                                         { E.BinaryOp E.OpEqual $1 $3 }
-        | Expr '&&' Expr                                        { E.BinaryOp E.OpAnd $1 $3 }
-        | Expr '||' Expr                                        { E.BinaryOp E.OpOr $1 $3 }
+        | Expr '&&' Expr                                        { E.BoolBinaryOp E.OpAnd $1 $3 }
+        | Expr '||' Expr                                        { E.BoolBinaryOp E.OpOr $1 $3 }
         | Expr ':=' Expr                                        { E.BinaryOp E.OpAssign $1 $3 }
         | begin ExprList end                                    { E.Sequence $2 }
         | if Expr then Expr else Expr end                       { E.If $2 $4 $6 }
