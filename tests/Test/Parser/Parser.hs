@@ -49,6 +49,17 @@ exprTests = testGroup "Expr"
             testProperty "OpMul" (arithBOpHelper OpMul "*"),
             testProperty "OpDiv" (arithBOpHelper OpDiv "/"),
             testProperty "OpLess" (arithBOpHelper OpLess "<")
+        ],
+        testGroup "BoolBinaryOp"
+        [
+            testProperty "OpAnd" (boolBOpHelper OpAnd "&&"),
+            testProperty "OpOr" (boolBOpHelper OpOr "||")
+        ],
+        testGroup "BinaryOp"
+        [
+            testCase "OpEqual" $ parse "17 = 18" @?= (Right $ BinaryOp OpEqual (SimpleExpr $ Integer 17) (SimpleExpr $ Integer 18)),
+            testCase "OpEqual" $ parse "true = false" @?= (Right $ BinaryOp OpEqual (SimpleExpr $ Boolean True) (SimpleExpr $ Boolean False)),
+            testCase "OpEqual" $ parse "() = ()" @?= (Right $ BinaryOp OpEqual (SimpleExpr Unit) (SimpleExpr Unit))
         ]
     ]
 
@@ -60,3 +71,10 @@ arithBOpHelper op opString =
         parse (s1 ++ opString ++ s2)
         ===
         Right ((ArithBinaryOp op) (SimpleExpr $ Integer i1) (SimpleExpr $ Integer i2))
+
+boolBOpHelper :: BoolBOp -> String -> Property
+boolBOpHelper op opString =
+    forAll (pairsOf booleans) $ \((b1,s1), (b2,s2)) ->
+        parse (s1 ++ opString ++ s2)
+        ===
+        Right ((BoolBinaryOp op) (SimpleExpr $ Boolean b1) (SimpleExpr $ Boolean b2))
