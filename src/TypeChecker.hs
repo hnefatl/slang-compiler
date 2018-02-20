@@ -4,7 +4,7 @@
 -- passed the restriction imposed by the function.
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
-module TypeChecker.TypeChecker
+module TypeChecker
 (
     inferType,
     typecheck,

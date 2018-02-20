@@ -1,10 +1,10 @@
 {
-module Parser.Parser
+module Parser
 (
     parse
 ) where
 
-import Lexer.Lexer
+import Lexer
 import qualified Lexer.Tokens as L
 
 import qualified Parser.Types as T

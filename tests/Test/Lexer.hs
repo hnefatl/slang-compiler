@@ -1,10 +1,10 @@
-module Test.Lexer.Lexer where
+module Test.Lexer where
 
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Lexer.Lexer
+import Lexer
 import Lexer.Tokens
 
 import Test.Util

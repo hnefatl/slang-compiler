@@ -19,7 +19,7 @@ import Control.Applicative (liftA2)
 
 import Data.Char (toLower)
 
-import Lexer.Lexer (reservedTokens)
+import Lexer (reservedTokens)
 
 -- Inverted Tasty.HUnit assertion
 (~?=) :: (Eq a, Show a) => a -> a -> Assertion

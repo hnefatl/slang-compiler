@@ -1,10 +1,10 @@
-module Test.Parser.Parser where
+module Test.Parser where
 
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Parser.Parser
+import Parser
 import Parser.Expressions
 import qualified Parser.Types as T
 
@@ -74,7 +74,36 @@ exprTests = testGroup "Expr"
         ],
         testGroup "Inl"
         [
-            testCase "Inl Int+Bool" $ parse "inl 5 : int + bool" @?= (Right $ Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean))
+            testCase "Inl Int+Bool" $ parse "inl 5 : int + bool" @?= (Right $ Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)),
+            testCase "Inl (Int+Bool)+Unit" $ parse "inl (inl 5 : int + bool) : (int + bool) + unit" @?= (Right $ Inl (SimpleExpr $ Expr $ Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)) (T.Union (T.Union T.Integer T.Boolean) T.Unit))
+        ],
+        testGroup "Inr"
+        [
+            testCase "Inr Int+Bool" $ parse "inr true : int + bool" @?= (Right $ Inr (SimpleExpr $ Boolean True) (T.Union T.Integer T.Boolean)),
+            testCase "Inr (Int+Bool)+Unit" $ parse "inr () : (int + bool) + unit" @?= (Right $ Inr (SimpleExpr Unit) (T.Union (T.Union T.Integer T.Boolean) T.Unit))
+        ],
+        testGroup "Case"
+        [
+            testCase "Case Inl 5" $ parse "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" @?= (Right $ Case (Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)) (Fun "x" T.Integer $ SimpleExpr $ Boolean True) (Fun "x" T.Boolean $ SimpleExpr $ Identifier "x"))
+        ],
+        testGroup "Fst"
+        [
+            testCase "Fst (1, 2)" $ parse "fst (1, 2)" @?= (Right $ Fst $ SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 2)),
+            testCase "Fst (true, (1,2))" $ parse "fst (true, (1,2))" @?= (Right $ Fst $ SimpleExpr $ Pair (SimpleExpr $ Boolean True) (SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 2)))
+        ],
+        testGroup "Snd"
+        [
+            testCase "Snd (1, 2)" $ parse "snd (1, 2)" @?= (Right $ Snd $ SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 2)),
+            testCase "Snd (true, (1,2))" $ parse "snd (true, (1,2))" @?= (Right $ Snd $ SimpleExpr $ Pair (SimpleExpr $ Boolean True) (SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 2)))
+        ],
+        testGroup "While"
+        [
+            testCase "While true do 5" $ parse "while true do 5" @?= (Right $ While (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 5)),
+            testCase "While Fst (true, 1) do 5" $ parse "while fst (true, 1) do 5" @?= (Right $ While (Fst $ SimpleExpr $ Pair (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 1)) (SimpleExpr $ Integer 5))
+        ],
+        testGroup "Let"
+        [
+
         ]
     ]
 
