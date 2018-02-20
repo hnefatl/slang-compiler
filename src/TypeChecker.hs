@@ -35,6 +35,7 @@ inferType (E.BoolBinaryOp _ l r)  = do
 inferType (E.BinaryOp E.OpEqual l r) = do
                                         lType <- inferType l
                                         restrictedInfer (== lType) "Type of LHS doesn't match type of RHS in equality" inferType r
+                                        return T.Boolean
 inferType (E.BinaryOp E.OpAssign l r) = do
                                         rType <- inferType r
                                         restrictedInfer (== T.Ref rType) "Type of LHS doesn't match type of RHS in assignment" inferType l
@@ -44,14 +45,19 @@ inferType (E.If e1 e2 e3)             = do
                                         restrictedInfer T.isBoolean "Condition of if-statement is non-boolean" inferType e1
                                         tType <- inferType e2
                                         restrictedInfer (== tType) "Branches of if-statement don't have the same type" inferType e3
-inferType (E.Inl e (T.Union lt _))   = restrictedInfer (== lt) "Expression in inl must match left side of union type" inferType e
+inferType (E.Inl e (T.Union lt rt))   = do
+                                        restrictedInfer (== lt) "Expression in inl must match left side of union type" inferType e
+                                        return $ T.Union lt rt
 inferType (E.Inl _ _)                = throwE "Expected union-type in inl"
-inferType (E.Inr e (T.Union _ rt))   = restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
+inferType (E.Inr e (T.Union lt rt))  = do
+                                       restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
+                                       return $ T.Union lt rt
 inferType (E.Inr _ _)                = throwE "Expected union-type in inr"
 inferType (E.Case e fl fr)           = do   
                                         (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
                                         (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
                                         restrictedInfer (== T.Fun rArg lRet) ("Expression in inr branch of case statement must have type " ++ show rArg ++ " -> " ++ show lRet) inferType fr
+                                        return lRet
 inferType (E.Fst e)                  = do
                                         (T.Product t _) <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
                                         return t
@@ -71,7 +77,8 @@ inferType (E.LetFun n f t e)         = do
 --                                        fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
 --                                        inLocal (M.insert n fType) (inferType e)
 inferType (E.LetRecFun _ _ _ _) = undefined
-inferType (E.Fun v t e)              = inLocal (M.insert v t) (inferType e)
+inferType (E.Fun v t e)             = do innerType <- inLocal (M.insert v t) (inferType e)
+                                         return $ T.Fun t innerType
 inferType (E.Apply f x)             = do
                                         (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
                                         restrictedInfer (== fArg) "Function applied to value of wrong type" inferTypeSimple x
