@@ -4,14 +4,14 @@
 
 module Lexer.Lexer
 (
+    reservedTokens,
     Alex(..),
     alexMonadScan,
     runAlex,
     alexEOF,
     alexError,
     Token,
-    tokenise,
-    tokenise'
+    tokenise
 ) where
 
 import Data.Char (toLower, toUpper)
@@ -87,13 +87,15 @@ tokens :-
 
     "?"                 { makeConstAlexToken T.Input }
 
-    @identifier         { makeAlexToken T.Identifier }
-    
     "int"               { makeConstAlexToken T.IntType }
     "bool"              { makeConstAlexToken T.BoolType }
     "unit"              { makeConstAlexToken T.UnitType }
 
+    @identifier         { makeAlexToken T.Identifier }
+    
 {
+reservedTokens :: [String]
+reservedTokens = ["ref", "inl", "inr", "case", "of", "fst", "snd", "if", "then", "else", "let", "in", "fun", "begin", "end", "while", "do", "int", "bool", "unit"]
 
 -- Construct a token in the Alex monad given a function to convert an input to a token
 makeAlexToken :: (String -> T.TokenClass) -> AlexInput -> Int -> Alex Token
@@ -116,7 +118,4 @@ capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
 tokenise :: String -> Either String Token
 tokenise s = runAlex s alexMonadScan
-
-tokenise' :: String -> Maybe T.TokenClass
-tokenise' = either (const Nothing) (Just . fst) . tokenise
 }

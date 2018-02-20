@@ -7,6 +7,11 @@ import Test.Tasty.QuickCheck
 import Lexer.Lexer
 import Lexer.Tokens
 
+import Test.Util
+
+tokenise' :: String -> Maybe TokenClass
+tokenise' = either (const Nothing) (Just . fst) . tokenise
+
 lexerTests :: TestTree
 lexerTests = testGroup "Lexer" $
     [
@@ -58,7 +63,15 @@ lexerTests = testGroup "Lexer" $
         testCase "Do" $ tokenise' "do" @?= Just Do,
 
         testCase "Unit" $ tokenise' "()" @?= Just Unit,
-        testProperty "Integer" $ forAll arbitrarySizedNatural (\i -> tokenise' (show i) === Just (Integer i)),
+        testProperty "Integer" $ forAll integers (\(i,s) -> tokenise' s === Just (Integer i)),
         testCase "Boolean True" $ tokenise' "true" @?= Just (Boolean True),
-        testCase "Boolean False" $ tokenise' "false" @?= Just (Boolean False)
+        testCase "Boolean False" $ tokenise' "false" @?= Just (Boolean False),
+
+        testCase "Input" $ tokenise' "?" @?= Just Input,
+
+        testProperty "Identifier" $ forAll identifiers (\i -> tokenise' i === Just (Identifier i)),
+
+        testCase "Int Type" $ tokenise' "int" @?= Just IntType,
+        testCase "Bool Type" $ tokenise' "bool" @?= Just BoolType,
+        testCase "Unit Type" $ tokenise' "unit" @?= Just UnitType
     ]

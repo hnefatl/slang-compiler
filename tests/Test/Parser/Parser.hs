@@ -6,6 +6,7 @@ import Test.Tasty.QuickCheck
 
 import Parser.Parser
 import Parser.Expressions
+import qualified Parser.Types as T
 
 import Test.Util
 
@@ -60,6 +61,20 @@ exprTests = testGroup "Expr"
             testCase "OpEqual" $ parse "17 = 18" @?= (Right $ BinaryOp OpEqual (SimpleExpr $ Integer 17) (SimpleExpr $ Integer 18)),
             testCase "OpEqual" $ parse "true = false" @?= (Right $ BinaryOp OpEqual (SimpleExpr $ Boolean True) (SimpleExpr $ Boolean False)),
             testCase "OpEqual" $ parse "() = ()" @?= (Right $ BinaryOp OpEqual (SimpleExpr Unit) (SimpleExpr Unit))
+        ],
+        testGroup "Sequence"
+        [
+            testCase "Int Sequence" $ parse "begin 17;16;15 end" @?= (Right $ Sequence [SimpleExpr (Integer 17), SimpleExpr (Integer 16), SimpleExpr (Integer 15)]),
+            testCase "Bool Sequence" $ parse "begin true;false end" @?= (Right $ Sequence [SimpleExpr (Boolean True), SimpleExpr (Boolean False)])
+        ],
+        testGroup "If"
+        [
+            testCase "If Int" $ parse "if true then 1 else 0 end" @?= (Right $ If (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 0)),
+            testCase "If Bool" $ parse "if true then false else true end" @?= (Right $ If (SimpleExpr $ Boolean True) (SimpleExpr $ Boolean False) (SimpleExpr $ Boolean True))
+        ],
+        testGroup "Inl"
+        [
+            testCase "Inl Int+Bool" $ parse "inl 5 : int + bool" @?= (Right $ Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean))
         ]
     ]
 
