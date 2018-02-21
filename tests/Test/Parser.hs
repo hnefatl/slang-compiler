@@ -119,7 +119,17 @@ exprTests = testGroup "Expr"
         ],
         testGroup "LetRecFun"
         [
-
+            testCase' "let rec f(x : int) : int = if x = 0 then 1 else x * f x end in f 5 end" (LetRecFun "f" (Fun "x" T.Integer (If (BinaryOp OpEqual (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 0)) (SimpleExpr $ Integer 1) (ArithBinaryOp OpMul (SimpleExpr $ Identifier "x") (Application (SimpleExpr $ Identifier "f") (Identifier "x"))))) T.Integer (Application (SimpleExpr $ Identifier "f") (Integer 5))),
+            testCase' "let rec f(x : int) : int = if x < 1 then 0 else f (x - 1) + f (x - 2) end in f 5 end" $
+                    LetRecFun "f"
+                            (Fun "x" T.Integer $
+                                If (ArithBinaryOp OpLess (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1))
+                                    (SimpleExpr $ Integer 0)
+                                    (ArithBinaryOp OpAdd 
+                                        (Application (SimpleExpr $ Identifier "f") (Expr $ ArithBinaryOp OpSub (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1)))
+                                        (Application (SimpleExpr $ Identifier "f") (Expr $ ArithBinaryOp OpSub (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 2)))))
+                            T.Integer
+                        (Application (SimpleExpr $ Identifier "f") (Integer 5))
         ],
         testGroup "Fun"
         [
