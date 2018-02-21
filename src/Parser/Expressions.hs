@@ -12,9 +12,9 @@ module Parser.Expressions
 import Parser.Types
 
 data UOp = OpNot | OpNeg deriving (Eq, Show)
-data ArithBOp = OpAdd | OpSub | OpMul | OpDiv | OpLess deriving (Eq, Show)
+data ArithBOp = OpAdd | OpSub | OpMul | OpDiv deriving (Eq, Show)
 data BoolBOp = OpAnd | OpOr deriving (Eq, Show)
-data BOp = OpEqual | OpAssign deriving (Eq, Show)
+data BOp = OpEqual | OpLess | OpAssign deriving (Eq, Show)
 
 type Variable = String
 

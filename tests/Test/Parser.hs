@@ -54,8 +54,7 @@ exprTests = testGroup "Expr"
             testProperty "OpAdd" (arithBOpHelper OpAdd "+"),
             testProperty "OpSub" (arithBOpHelper OpSub "-"),
             testProperty "OpMul" (arithBOpHelper OpMul "*"),
-            testProperty "OpDiv" (arithBOpHelper OpDiv "/"),
-            testProperty "OpLess" (arithBOpHelper OpLess "<")
+            testProperty "OpDiv" (arithBOpHelper OpDiv "/")
         ],
         testGroup "BoolBinaryOp"
         [
@@ -66,7 +65,9 @@ exprTests = testGroup "Expr"
         [
             testCase' "17 = 18" (BinaryOp OpEqual (SimpleExpr $ Integer 17) (SimpleExpr $ Integer 18)),
             testCase' "true = false" (BinaryOp OpEqual (SimpleExpr $ Boolean True) (SimpleExpr $ Boolean False)),
-            testCase' "() = ()" (BinaryOp OpEqual (SimpleExpr Unit) (SimpleExpr Unit))
+            testCase' "() = ()" (BinaryOp OpEqual (SimpleExpr Unit) (SimpleExpr Unit)),
+            testCase' "5 < 4" (BinaryOp OpLess (SimpleExpr $ Integer 5) (SimpleExpr $ Integer 4)),
+            testCase' "true < 4" (BinaryOp OpLess (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 4))
         ],
         testGroup "Sequence"
         [
@@ -123,7 +124,7 @@ exprTests = testGroup "Expr"
             testCase' "let rec f(x : int) : int = if x < 1 then 0 else f (x - 1) + f (x - 2) end in f 5 end" $
                     LetRecFun "f"
                             (Fun "x" T.Integer $
-                                If (ArithBinaryOp OpLess (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1))
+                                If (BinaryOp OpLess (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1))
                                     (SimpleExpr $ Integer 0)
                                     (ArithBinaryOp OpAdd 
                                         (Application (SimpleExpr $ Identifier "f") (Expr $ ArithBinaryOp OpSub (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1)))

@@ -36,6 +36,10 @@ inferType (E.BinaryOp E.OpEqual l r) = do
                                         lType <- inferType l
                                         restrictedInfer (== lType) "Type of LHS doesn't match type of RHS in equality" inferType r
                                         return T.Boolean
+inferType (E.BinaryOp E.OpLess l r) = do
+                                        restrictedInfer T.isInteger "RHS of < must have type integer" inferType r
+                                        restrictedInfer T.isInteger "LHS of < must have type integer" inferType l
+                                        return T.Boolean
 inferType (E.BinaryOp E.OpAssign l r) = do
                                         rType <- inferType r
                                         restrictedInfer (== T.Ref rType) "Type of LHS doesn't match type of RHS in assignment" inferType l
@@ -73,10 +77,12 @@ inferType (E.Let v t e1 e2)          = do
 inferType (E.LetFun n f t e)         = do
                                         fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
                                         inLocal (M.insert n fType) (inferType e)
---inferType (E.LetRecFun n f t e)      = do
---                                        fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
---                                        inLocal (M.insert n fType) (inferType e)
-inferType (E.LetRecFun _ _ _ _) = undefined
+inferType (E.LetRecFun n f@(E.Fun _ argT _) retT e) =
+                                        inLocal (M.insert n funType) $ do
+                                            restrictedInfer (== funType) ("Expression in let rec fun statement isn't of type " ++ show funType) inferType f
+                                            inferType e
+                                        where funType = T.Fun argT retT
+inferType (E.LetRecFun _ _ _ _)     = throwE "Expected fun type in let rec fun statement."
 inferType (E.Fun v t e)             = do innerType <- inLocal (M.insert v t) (inferType e)
                                          return $ T.Fun t innerType
 inferType (E.Application f x)       = do

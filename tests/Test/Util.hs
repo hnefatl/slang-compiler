@@ -27,7 +27,7 @@ x ~?= y = do
         result <- try (x @?= y)
         case result of
             Left (_ :: HUnitFailure) -> return ()
-            Right _ -> assertFailure ""
+            Right _ -> assertFailure ("Expected != " ++ show y ++ "\nGot         " ++ show x)
 
 makePair :: (a -> b) -> Gen a -> Gen (a, b)
 makePair f gen = do
