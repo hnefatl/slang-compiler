@@ -13,6 +13,12 @@ import Parser.Types
 typecheck' :: String -> Either Error Type
 typecheck' s = parse s >>= typecheck
 
+testCase' :: String -> Type -> TestTree
+testCase' s t = testCase s (typecheck' s @?= Right t)
+
+testCaseInvert' :: String -> Type -> TestTree
+testCaseInvert' s t = testCase ("Fails: " ++ s) (typecheck' s ~?= Right t)
+
 typecheckerTests :: TestTree
 typecheckerTests = testGroup "TypeChecker"
     [
@@ -57,46 +63,67 @@ exprTests = testGroup "Expr"
         ],
         testGroup "Sequence"
         [
-            testCase "Int Sequence" $ typecheck' "begin 17;16;15 end" @?= Right Integer,
-            testCase "Bool Sequence" $ typecheck' "begin true;false end" @?= Right Boolean
+            testCase' "begin 17;16;15 end" Integer,
+            testCase' "begin true;false end" Boolean
         ],
         testGroup "If"
         [
-            testCase "If Int" $ typecheck' "if true then 1 else 0 end" @?= Right Integer,
-            testCase "If Bool" $ typecheck' "if true then false else true end" @?= Right Boolean
+            testCase' "if true then 1 else 0 end" Integer,
+            testCase' "if true then false else true end" Boolean
         ],
         testGroup "Inl"
         [
-            testCase "Inl Int+Bool" $ typecheck' "inl 5 : int + bool" @?= Right (Union Integer Boolean),
-            testCase "Inl (Int+Bool)+Unit" $ typecheck' "inl (inl 5 : int + bool) : (int + bool) + unit" @?= Right (Union (Union Integer Boolean) Unit)
+            testCase' "inl 5 : int + bool" (Union Integer Boolean),
+            testCase' "inl (inl 5 : int + bool) : (int + bool) + unit" (Union (Union Integer Boolean) Unit)
         ],
         testGroup "Inr"
         [
-            testCase "Inr Int+Bool" $ typecheck' "inr true : int + bool" @?= Right (Union Integer Boolean),
-            testCase "Inr (Int+Bool)+Unit" $ typecheck' "inr () : (int + bool) + unit" @?= Right (Union (Union Integer Boolean) Unit)
+            testCase' "inr true : int + bool" (Union Integer Boolean),
+            testCase' "inr () : (int + bool) + unit" (Union (Union Integer Boolean) Unit)
         ],
         testGroup "Case"
         [
-            testCase "Case Inl 5" $ typecheck' "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" @?= Right Boolean
+            testCase' "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" Boolean
         ],
         testGroup "Fst"
         [
-            testCase "Fst (1, 2)" $ typecheck' "fst (1, 2)" @?= Right Integer,
-            testCase "Fst (true, (1,2))" $ typecheck' "fst (true, (1,2))" @?= Right Boolean
+            testCase' "fst (1, 2)" Integer,
+            testCase' "fst (true, (1,2))" Boolean
         ],
         testGroup "Snd"
         [
-            testCase "Snd (1, 2)" $ typecheck' "snd (1, 2)" @?= Right Integer,
-            testCase "Snd (true, (1,2))" $ typecheck' "snd (true, (1,2))" @?= Right (Product Integer Integer)
+            testCase' "snd (1, 2)" Integer,
+            testCase' "snd (true, (1,2))" (Product Integer Integer)
         ],
         testGroup "While"
         [
-            testCase "While true do 5" $ typecheck' "while true do 5" @?= Right Integer,
-            testCase "While Fst (true, 1) do 5" $ typecheck' "while fst (true, 1) do 5" @?= Right Integer,
-            testCase "Fails: While Snd (true, 1) do 5" $ typecheck' "while snd (true, 1) do 5" ~?= Right Integer
+            testCase' "while true do 5" Integer,
+            testCase' "while fst (true, 1) do 5" Integer,
+            testCaseInvert' "while snd (true, 1) do 5" Integer
         ],
         testGroup "Let"
         [
+            testCase' "let x : int = 5 in x end" Integer,
+            testCase' "let x : int * bool = (1, true) in snd x end" Boolean
+        ],
+        testGroup "LetFun"
+        [
+            testCase' "let id (x : int) : int = x in id end" (Fun Integer Integer),
+            testCase' "let id (x : int) : int = x in id 5 end" Integer
+        ],
+        testGroup "LetRecFun"
+        [
+
+        ],
+        testGroup "Fun"
+        [
+            testCase' "fun (x : int) -> x end" (Fun Integer Integer),
+            testCase' "fun (x : int) -> true end" (Fun Integer Boolean)
+        ],
+        testGroup "Apply"
+        [
+            testCase' "(fun (x : int) -> true end) 5" Boolean,
+            testCaseInvert' "(fun (x : int) -> true end) false" Boolean
         ]
     ]
 
