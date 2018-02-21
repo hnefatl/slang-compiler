@@ -47,11 +47,11 @@ data Expr   = UnaryOp UOp Expr
             | While Expr Expr
 
             | Let Variable Type Expr Expr  -- let (x : int) = 1 in ... end
-            | LetFun Variable Expr Type Expr  -- let f(x : int) : int = x + 1 in ... end
-            | LetRecFun Variable Expr Type Expr  -- let rec f(x : int) : int = f(x - 1) in ... end
+            | LetFun Variable Expr Type Expr  -- let f(x : int) : int = x + 1 in ... end. The first Expr is a function.
+            | LetRecFun Variable Expr Type Expr  -- let rec f(x : int) : int = f(x - 1) in ... end. The first Expr is a function.
 
             | Fun Variable Type Expr
-            | Apply Expr SimpleExpr
+            | Application Expr SimpleExpr
 
             | SimpleExpr SimpleExpr
             deriving (Eq, Show)

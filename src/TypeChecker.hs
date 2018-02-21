@@ -79,7 +79,7 @@ inferType (E.LetFun n f t e)         = do
 inferType (E.LetRecFun _ _ _ _) = undefined
 inferType (E.Fun v t e)             = do innerType <- inLocal (M.insert v t) (inferType e)
                                          return $ T.Fun t innerType
-inferType (E.Apply f x)             = do
+inferType (E.Application f x)       = do
                                         (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
                                         restrictedInfer (== fArg) "Function applied to value of wrong type" inferTypeSimple x
                                         return fRet

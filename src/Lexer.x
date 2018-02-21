@@ -71,6 +71,7 @@ tokens :-
     "else"              { makeConstAlexToken T.Else }
 
     "let"               { makeConstAlexToken T.Let }
+    "rec"               { makeConstAlexToken T.Rec }
     "in"                { makeConstAlexToken T.In }
 
     "fun"               { makeConstAlexToken T.Fun }

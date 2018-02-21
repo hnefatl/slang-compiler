@@ -59,6 +59,7 @@ import qualified Parser.Expressions as E
     else        { (L.Else, _) }
 
     let         { (L.Let, _) }
+    rec         { (L.Rec, _) }
     in          { (L.In, _) }
 
     fun         { (L.Fun, _) }
@@ -101,7 +102,7 @@ Expr :: { E.Expr }
 Expr    : SimpleExpr                                            { E.SimpleExpr $1 }
         | '-' Expr  %prec unit                                  { E.UnaryOp E.OpNeg $2 }
         | '~' Expr  %prec unit                                  { E.UnaryOp E.OpNot $2 }
-        | Expr SimpleExpr                                       { E.Apply $1 $2 }
+        | Expr SimpleExpr                                       { E.Application $1 $2 }
             -- Unary negation has high precedence
         | Expr '+' Expr                                         { E.ArithBinaryOp E.OpAdd $1 $3 }
         | Expr '-' Expr                                         { E.ArithBinaryOp E.OpSub $1 $3 }
@@ -124,6 +125,9 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
 
         | let identifier '(' identifier ':' Type ')'
                     ':' Type '=' Expr in Expr end               { E.LetFun $2 (E.Fun $4 $6 $11) $9 $13 }
+
+        | let rec identifier '(' identifier ':' Type ')'
+                    ':' Type '=' Expr in Expr end               { E.LetRecFun $3 (E.Fun $5 $7 $12) $10 $14 }
 
         | case Expr of
                 inl '(' identifier ':' Type ')' '->' Expr
