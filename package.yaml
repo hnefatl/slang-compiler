@@ -33,8 +33,6 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-#  - Lexer.Lexer
-#  - Parser.Parser
 
 ghc-options:
 - -Wall
