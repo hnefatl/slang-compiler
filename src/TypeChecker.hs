@@ -19,20 +19,20 @@ import TypeChecker.TypeCheckerMonad
 import Data.Map.Lazy as M
 
 inferType :: E.Expr -> TypeChecker T.Type
-inferType (E.SimpleExpr e) = inferTypeSimple e
-inferType (E.UnaryOp E.OpNeg e)     = restrictedInfer T.isInteger "Negation of a non-integer expression" inferType e
-inferType (E.UnaryOp E.OpNot e)     = restrictedInfer T.isBoolean "\"Not\"-ing of a non-boolean expression" inferType e
-inferType (E.ArithBinaryOp _ l r)  = do
+inferType (E.SimpleExpr e)            = inferTypeSimple e
+inferType (E.UnaryOp E.OpNeg e)       = restrictedInfer T.isInteger "Negation of a non-integer expression" inferType e
+inferType (E.UnaryOp E.OpNot e)       = restrictedInfer T.isBoolean "\"Not\"-ing of a non-boolean expression" inferType e
+inferType (E.ArithBinaryOp _ l r)     = do
                                         restrictedInfer T.isInteger "LHS of arithmetic operator is non-integer" inferType l
                                         restrictedInfer T.isInteger "RHS of arithmetic operator is non-integer" inferType r
-inferType (E.BoolBinaryOp _ l r)  = do
+inferType (E.BoolBinaryOp _ l r)      = do
                                         restrictedInfer T.isBoolean "LHS of boolean operator is non-boolean" inferType l
                                         restrictedInfer T.isBoolean "RHS of boolean operator is non-boolean" inferType r
-inferType (E.BinaryOp E.OpEqual l r) = do
+inferType (E.BinaryOp E.OpEqual l r)  = do
                                         lType <- inferType l
                                         restrictedInfer (== lType) "Type of LHS doesn't match type of RHS in equality" inferType r
                                         return T.Boolean
-inferType (E.BinaryOp E.OpLess l r) = do
+inferType (E.BinaryOp E.OpLess l r)   = do
                                         restrictedInfer T.isInteger "RHS of < must have type integer" inferType r
                                         restrictedInfer T.isInteger "LHS of < must have type integer" inferType l
                                         return T.Boolean
@@ -48,29 +48,29 @@ inferType (E.If e1 e2 e3)             = do
 inferType (E.Inl e (T.Union lt rt))   = do
                                         restrictedInfer (== lt) "Expression in inl must match left side of union type" inferType e
                                         return $ T.Union lt rt
-inferType (E.Inl _ _)                = typeError "Expected union-type in inl"
-inferType (E.Inr e (T.Union lt rt))  = do
-                                       restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
-                                       return $ T.Union lt rt
-inferType (E.Inr _ _)                = typeError "Expected union-type in inr"
-inferType (E.Case e fl fr)           = do   
-                                        (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
-                                        (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
-                                        restrictedInfer (== T.Fun rArg lRet) ("Expression in inr branch of case statement must have type " ++ show rArg ++ " -> " ++ show lRet) inferType fr
-                                        return lRet
-inferType (E.Fst e)                  = do
-                                        (T.Product t _) <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
-                                        return t
-inferType (E.Snd e)                  = do
-                                        (T.Product _ t) <- restrictedInfer T.isProduct "Expression in snd statement must have product type" inferType e
-                                        return t
-inferType (E.While e1 e2)            = do
-                                        restrictedInfer (T.isBoolean) "Condition in while loop must have boolean type" inferType e1
-                                        inferType e2
-inferType (E.Let v t e1 e2)          = do
-                                        restrictedInfer (== t) "Variable's initialiser must have the same type as the variable" inferType e1
-                                        inModifiedEnv (M.insert v t) (inferType e2)
-inferType (E.LetFun n f t e)         = do
+inferType (E.Inl _ _)                 = typeError "Expected union-type in inl"
+inferType (E.Inr e (T.Union lt rt))   = do
+                                        restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
+                                        return $ T.Union lt rt
+inferType (E.Inr _ _)                 = typeError "Expected union-type in inr"
+inferType (E.Case e fl fr)            = do   
+                                         (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
+                                         (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
+                                         restrictedInfer (== T.Fun rArg lRet) ("Expression in inr branch of case statement must have type " ++ show rArg ++ " -> " ++ show lRet) inferType fr
+                                         return lRet
+inferType (E.Fst e)                   = do
+                                         (T.Product t _) <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
+                                         return t
+inferType (E.Snd e)                   = do
+                                         (T.Product _ t) <- restrictedInfer T.isProduct "Expression in snd statement must have product type" inferType e
+                                         return t
+inferType (E.While e1 e2)             = do
+                                         restrictedInfer (T.isBoolean) "Condition in while loop must have boolean type" inferType e1
+                                         inferType e2
+inferType (E.Let v t e1 e2)           = do
+                                         restrictedInfer (== t) "Variable's initialiser must have the same type as the variable" inferType e1
+                                         inModifiedEnv (M.insert v t) (inferType e2)
+inferType (E.LetFun n f t e)          = do
                                         fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
                                         inModifiedEnv (M.insert n fType) (inferType e)
 inferType (E.LetRecFun n f@(E.Fun _ argT _) retT e) =
@@ -78,10 +78,10 @@ inferType (E.LetRecFun n f@(E.Fun _ argT _) retT e) =
                                             restrictedInfer (== funType) ("Expression in let rec fun statement isn't of type " ++ show funType) inferType f
                                             inferType e
                                         where funType = T.Fun argT retT
-inferType (E.LetRecFun _ _ _ _)     = typeError "Expected fun type in let rec fun statement."
-inferType (E.Fun v t e)             = do innerType <- inModifiedEnv (M.insert v t) (inferType e)
-                                         return $ T.Fun t innerType
-inferType (E.Application f x)       = do
+inferType (E.LetRecFun _ _ _ _)       = typeError "Expected fun type in let rec fun statement."
+inferType (E.Fun v t e)               = do innerType <- inModifiedEnv (M.insert v t) (inferType e)
+                                           return $ T.Fun t innerType
+inferType (E.Application f x)         = do
                                         (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
                                         restrictedInfer (== fArg) "Function applied to value of wrong type" inferTypeSimple x
                                         return fRet
