@@ -18,7 +18,11 @@ import TypeChecker.TypeCheckerMonad
 
 import Data.Map.Lazy as M
 
-inferType :: E.Expr -> TypeChecker T.Type
+type Error = String
+
+type SlangTypeChecker = TypeChecker E.Variable T.Type Error T.Type
+
+inferType :: E.Expr -> SlangTypeChecker
 inferType (E.SimpleExpr e)            = inferTypeSimple e
 inferType (E.UnaryOp E.OpNeg e)       = restrictedInfer T.isInteger "Negation of a non-integer expression" inferType e
 inferType (E.UnaryOp E.OpNot e)       = restrictedInfer T.isBoolean "\"Not\"-ing of a non-boolean expression" inferType e
@@ -88,7 +92,7 @@ inferType (E.Application f x)         = do
 
 
 
-inferTypeSimple :: E.SimpleExpr -> TypeChecker T.Type
+inferTypeSimple :: E.SimpleExpr -> SlangTypeChecker
 inferTypeSimple (E.Expr e) = inferType e
 inferTypeSimple E.Unit              = return T.Unit
 inferTypeSimple (E.Integer _)       = return T.Integer
@@ -107,7 +111,7 @@ inferTypeSimple (E.Pair l r)        = do
                                         rType <- inferType r
                                         return (T.Product lType rType)
 
-restrictedInfer :: (T.Type -> Bool) -> Error -> (a -> TypeChecker T.Type) -> (a -> TypeChecker T.Type)
+restrictedInfer :: (T.Type -> Bool) -> Error -> (a -> SlangTypeChecker) -> (a -> SlangTypeChecker)
 restrictedInfer p err inferrer expr = do
                                 t <- inferrer expr
                                 if p t then return t

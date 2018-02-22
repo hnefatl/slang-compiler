@@ -3,8 +3,6 @@
 module TypeChecker.TypeCheckerMonad
 (
     TypeChecker,
-    Environment,
-    Error,
     inModifiedEnv,
     fromEnv,
     typeError,
@@ -15,26 +13,22 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map.Lazy as M
 
-import qualified Parser.Types as T
-import qualified Parser.Expressions as E
+type Environment k v = M.Map k v
 
-type Environment = M.Map E.Variable T.Type
-type Error = String
-
-newtype TypeChecker a = TypeChecker
+newtype TypeChecker k v e a = TypeChecker
     {
-        run :: ReaderT Environment (Except Error ) a
+        run :: ReaderT (Environment k v) (Except e) a
     }
-    deriving (Functor, Applicative, Monad, MonadReader Environment, MonadError Error)
+    deriving (Functor, Applicative, Monad, MonadReader (Environment k v), MonadError e)
 
-inModifiedEnv :: (Environment -> Environment) -> TypeChecker a -> TypeChecker a
+inModifiedEnv :: (Environment k v -> Environment k v) -> TypeChecker k v e a -> TypeChecker k v e a
 inModifiedEnv = local
 
-fromEnv :: (Environment -> a) -> TypeChecker a
+fromEnv :: (Environment k v -> a) -> TypeChecker k v e a
 fromEnv = asks
 
-typeError :: String -> TypeChecker a
+typeError :: e -> TypeChecker k v e a
 typeError = throwError
 
-runTypeChecker :: TypeChecker a -> Either Error a
+runTypeChecker :: TypeChecker k v e a -> Either e a
 runTypeChecker t = runExcept $ runReaderT (run t) M.empty
