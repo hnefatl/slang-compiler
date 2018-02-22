@@ -14,15 +14,11 @@ module TypeChecker
 import qualified Parser.Types as T
 import qualified Parser.Expressions as E
 
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.Class
+import TypeChecker.TypeCheckerMonad
+
 import Data.Map.Lazy as M
 
-type TypeChecker = ExceptT Error (Reader (M.Map E.Variable T.Type)) T.Type
-type Error = String
-
-inferType :: E.Expr -> TypeChecker
+inferType :: E.Expr -> TypeChecker T.Type
 inferType (E.SimpleExpr e) = inferTypeSimple e
 inferType (E.UnaryOp E.OpNeg e)     = restrictedInfer T.isInteger "Negation of a non-integer expression" inferType e
 inferType (E.UnaryOp E.OpNot e)     = restrictedInfer T.isBoolean "\"Not\"-ing of a non-boolean expression" inferType e
@@ -52,11 +48,11 @@ inferType (E.If e1 e2 e3)             = do
 inferType (E.Inl e (T.Union lt rt))   = do
                                         restrictedInfer (== lt) "Expression in inl must match left side of union type" inferType e
                                         return $ T.Union lt rt
-inferType (E.Inl _ _)                = throwE "Expected union-type in inl"
+inferType (E.Inl _ _)                = typeError "Expected union-type in inl"
 inferType (E.Inr e (T.Union lt rt))  = do
                                        restrictedInfer (== rt) "Expression in inr must match right side of union type" inferType e
                                        return $ T.Union lt rt
-inferType (E.Inr _ _)                = throwE "Expected union-type in inr"
+inferType (E.Inr _ _)                = typeError "Expected union-type in inr"
 inferType (E.Case e fl fr)           = do   
                                         (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
                                         (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
@@ -73,17 +69,17 @@ inferType (E.While e1 e2)            = do
                                         inferType e2
 inferType (E.Let v t e1 e2)          = do
                                         restrictedInfer (== t) "Variable's initialiser must have the same type as the variable" inferType e1
-                                        inLocal (M.insert v t) (inferType e2)
+                                        inModifiedEnv (M.insert v t) (inferType e2)
 inferType (E.LetFun n f t e)         = do
                                         fType <- restrictedInfer (== T.Fun T.Any t) "Non-function provided in let fun statement" inferType f
-                                        inLocal (M.insert n fType) (inferType e)
+                                        inModifiedEnv (M.insert n fType) (inferType e)
 inferType (E.LetRecFun n f@(E.Fun _ argT _) retT e) =
-                                        inLocal (M.insert n funType) $ do
+                                        inModifiedEnv (M.insert n funType) $ do
                                             restrictedInfer (== funType) ("Expression in let rec fun statement isn't of type " ++ show funType) inferType f
                                             inferType e
                                         where funType = T.Fun argT retT
-inferType (E.LetRecFun _ _ _ _)     = throwE "Expected fun type in let rec fun statement."
-inferType (E.Fun v t e)             = do innerType <- inLocal (M.insert v t) (inferType e)
+inferType (E.LetRecFun _ _ _ _)     = typeError "Expected fun type in let rec fun statement."
+inferType (E.Fun v t e)             = do innerType <- inModifiedEnv (M.insert v t) (inferType e)
                                          return $ T.Fun t innerType
 inferType (E.Application f x)       = do
                                         (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
@@ -92,22 +88,16 @@ inferType (E.Application f x)       = do
 
 
 
--- Like "local" for Reader, but all wrapped inside the Except monad
-inLocal :: (r -> r) -> ExceptT e (Reader r) a -> ExceptT e (Reader r) a
-inLocal f x = ExceptT $ withReader f (runExceptT x)
-
-
-
-inferTypeSimple :: E.SimpleExpr -> TypeChecker
+inferTypeSimple :: E.SimpleExpr -> TypeChecker T.Type
 inferTypeSimple (E.Expr e) = inferType e
 inferTypeSimple E.Unit              = return T.Unit
 inferTypeSimple (E.Integer _)       = return T.Integer
 inferTypeSimple (E.Boolean _)       = return T.Boolean
 inferTypeSimple (E.Identifier name) = do
-                                        varType <- lift $ asks (M.lookup name)
+                                        varType <- fromEnv (M.lookup name)
                                         case varType of
                                             Just t -> return t
-                                            _      -> throwE ("Missing variable in environment " ++ name)
+                                            _      -> typeError ("Missing variable in environment " ++ name)
 inferTypeSimple (E.Ref e)           = do
                                         innerType <- inferTypeSimple e
                                         return (T.Ref innerType)
@@ -117,11 +107,11 @@ inferTypeSimple (E.Pair l r)        = do
                                         rType <- inferType r
                                         return (T.Product lType rType)
 
-restrictedInfer :: (T.Type -> Bool) -> Error -> (a -> TypeChecker) -> (a -> TypeChecker)
+restrictedInfer :: (T.Type -> Bool) -> Error -> (a -> TypeChecker T.Type) -> (a -> TypeChecker T.Type)
 restrictedInfer p err inferrer expr = do
                                 t <- inferrer expr
                                 if p t then return t
-                                else throwE err
+                                else typeError err
 
 typecheck :: E.Expr -> Either Error T.Type
-typecheck = (flip runReader) M.empty . runExceptT . inferType
+typecheck e = runTypeChecker (inferType e)

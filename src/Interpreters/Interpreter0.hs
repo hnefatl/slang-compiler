@@ -6,9 +6,8 @@ module Interpreters.Interpreter0
     interpret
 ) where
 
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.State
+import Control.Monad.Except
+import Control.Monad.State
 import Control.Monad (mapM)
 import qualified Data.Map as M
 
@@ -67,7 +66,7 @@ interpret (A.Case e l r) = do
                             case ev of
                                 Inl v   -> doApply l v
                                 Inr v   -> doApply r v
-                                _       -> throwE ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
+                                _       -> throwError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
 interpret (A.Fst e) = do
                         Product l _ <- interpret e
                         return l
@@ -99,13 +98,13 @@ interpret _ = undefined
 interpretUOp :: A.UOp -> Value -> Interpreter Value
 interpretUOp A.Neg (Integer i) = return $ Integer (-i)
 interpretUOp A.Not (Boolean b) = return $ Boolean (not b)
-interpretUOp op v = throwE ("Compiler Error: " ++ show op ++ " on " ++ show v)
+interpretUOp op v = throwError ("Compiler Error: " ++ show op ++ " on " ++ show v)
 
 interpretBOp :: A.BOp -> Value -> Value -> Interpreter Value
 interpretBOp A.Add (Integer l) (Integer r) = return $ Integer (l + r)
 interpretBOp A.Sub (Integer l) (Integer r) = return $ Integer (l - r)
 interpretBOp A.Mul (Integer l) (Integer r) = return $ Integer (l * r)
-interpretBOp A.Div (Integer _) (Integer 0) = throwE "Division by zero"
+interpretBOp A.Div (Integer _) (Integer 0) = throwError "Division by zero"
 interpretBOp A.Div (Integer l) (Integer r) = return $ Integer (l `div` r)
 interpretBOp A.And (Boolean l) (Boolean r) = return $ Boolean (l && r)
 interpretBOp A.Or (Boolean l) (Boolean r) = return $ Boolean (l || r)
@@ -113,7 +112,7 @@ interpretBOp A.Equal l r = return $ Boolean (l == r)
 interpretBOp A.Less (Integer l) (Integer r) = return $ Boolean (l < r)
 interpretBOp A.Assign (Ref l) v = do setValue l v
                                      return Unit
-interpretBOp op l r = throwE ("Compiler Error: " ++ show op ++ " on " ++ show l ++ " and " ++ show r)
+interpretBOp op l r = throwError ("Compiler Error: " ++ show op ++ " on " ++ show l ++ " and " ++ show r)
 
 makeRef :: Value -> Interpreter Value
 makeRef v = do
@@ -134,7 +133,7 @@ getValue name = do
                 val <- lift (gets (M.lookup name))
                 case val of
                     Just v  -> return v
-                    Nothing -> throwE ("Couldn't find variable with name " ++ name ++ " in environment")
+                    Nothing -> throwError ("Couldn't find variable with name " ++ name ++ " in environment")
 
 setValue :: A.Variable -> Value -> Interpreter ()
 setValue n v = do
