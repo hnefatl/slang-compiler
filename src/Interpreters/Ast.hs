@@ -1,10 +1,10 @@
 module Interpreters.Ast
 (
     Ast(..),
-    BOp,
-    UOp,
+    UOp(..),
+    BOp(..),
     Variable,
-    Lambda,
+    Lambda(..),
     translate
 ) where
 
@@ -15,8 +15,8 @@ import qualified Parser.Expressions as E
 -- an expression in brackets results in a SimpleExpr (Expr ___), when ideally we want it to just be
 -- an Expr.
 
-data BOp = Add | Sub | Mul | Div | And | Or | Equal | Less | Assign deriving (Eq, Show)
 data UOp = Neg | Not  deriving (Eq, Show)
+data BOp = Add | Sub | Mul | Div | And | Or | Equal | Less | Assign deriving (Eq, Show)
 
 type Variable = String
 data Lambda = Lambda Variable Ast deriving (Eq, Show)
@@ -24,7 +24,7 @@ data Lambda = Lambda Variable Ast deriving (Eq, Show)
 data Ast = Unit
          | Integer Integer
          | Boolean Bool
-         | Variable String
+         | Variable Variable
          | Deref Ast
          | Ref Ast
          | Pair Ast Ast
@@ -41,7 +41,7 @@ data Ast = Unit
          | Let Variable Ast Ast
          | LetFun Variable Lambda Ast
          | LetRecFun Variable Lambda Ast
-         | Fun Variable Ast
+         | Fun Lambda
          | Application Ast Ast
          | Input
          deriving (Eq, Show)
@@ -62,7 +62,7 @@ translate (E.While c e) = While (translate c) (translate e)
 translate (E.Let n _ v e) = Let n (translate v) (translate e)
 translate (E.LetFun n f _ e) = LetFun n (translateLambda f) (translate e)
 translate (E.LetRecFun n f _ e) = LetRecFun n (translateLambda f) (translate e)
-translate (E.Fun x _ e) = Fun x (translate e)
+translate e@(E.Fun _ _ _) = Fun (translateLambda e)
 translate (E.Application f e) = Application (translate f) (translateSimpleExpr e)
 translate (E.SimpleExpr e) = translateSimpleExpr e
 
