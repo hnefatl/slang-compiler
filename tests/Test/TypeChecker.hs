@@ -80,17 +80,17 @@ exprTests = testGroup "Expr"
         ],
         testGroup "Inl"
         [
-            testCase' "inl 5 : int + bool" (Union Integer Boolean),
-            testCase' "inl (inl 5 : int + bool) : (int + bool) + unit" (Union (Union Integer Boolean) Unit)
+            testCase' "inl bool 5" (Union Integer Boolean),
+            testCase' "inl unit (inl bool 5)" (Union (Union Integer Boolean) Unit)
         ],
         testGroup "Inr"
         [
-            testCase' "inr true : int + bool" (Union Integer Boolean),
-            testCase' "inr () : (int + bool) + unit" (Union (Union Integer Boolean) Unit)
+            testCase' "inr int true" (Union Integer Boolean),
+            testCase' "inr (int + bool) ()" (Union (Union Integer Boolean) Unit)
         ],
         testGroup "Case"
         [
-            testCase' "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" Boolean
+            testCase' "case inl bool 5 of inl (x : int) -> true | inr (x : bool) -> x end" Boolean
         ],
         testGroup "Fst"
         [
@@ -104,9 +104,9 @@ exprTests = testGroup "Expr"
         ],
         testGroup "While"
         [
-            testCase' "while true do 5" Integer,
-            testCase' "while fst (true, 1) do 5" Integer,
-            testCaseInvert' "while snd (true, 1) do 5" Integer
+            testCase' "while true do 5 end" Integer,
+            testCase' "while fst (true, 1) do 5 end" Integer,
+            testCaseInvert' "while snd (true, 1) do 5 end" Integer
         ],
         testGroup "Let"
         [

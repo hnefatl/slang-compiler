@@ -86,17 +86,17 @@ exprTests = testGroup "Expr"
         ],
         testGroup "Inl"
         [
-            testCase' "inl 5 : int + bool" (Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)),
-            testCase' "inl (inl 5 : int + bool) : (int + bool) + unit" (Inl (SimpleExpr $ Expr $ Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)) (T.Union (T.Union T.Integer T.Boolean) T.Unit))
+            testCase' "inl bool 5" (Inl (SimpleExpr $ Integer 5) T.Boolean),
+            testCase' "inl unit (inl bool 5)" (Inl (SimpleExpr $ Expr $ Inl (SimpleExpr $ Integer 5) T.Boolean) T.Unit)
         ],
         testGroup "Inr"
         [
-            testCase' "inr true : int + bool" (Inr (SimpleExpr $ Boolean True) (T.Union T.Integer T.Boolean)),
-            testCase' "inr () : (int + bool) + unit" (Inr (SimpleExpr Unit) (T.Union (T.Union T.Integer T.Boolean) T.Unit))
+            testCase' "inr int true" (Inr (SimpleExpr $ Boolean True) T.Integer),
+            testCase' "inr (int + bool) ()" (Inr (SimpleExpr Unit) (T.Union T.Integer T.Boolean))
         ],
         testGroup "Case"
         [
-            testCase' "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" (Case (Inl (SimpleExpr $ Integer 5) (T.Union T.Integer T.Boolean)) (Fun "x" T.Integer $ SimpleExpr $ Boolean True) (Fun "x" T.Boolean $ SimpleExpr $ Identifier "x"))
+            testCase' "case inl bool 5 of inl (x : int) -> true | inr (x : bool) -> x end" (Case (Inl (SimpleExpr $ Integer 5) T.Boolean) (Fun "x" T.Integer $ SimpleExpr $ Boolean True) (Fun "x" T.Boolean $ SimpleExpr $ Identifier "x"))
         ],
         testGroup "Fst"
         [
@@ -110,8 +110,8 @@ exprTests = testGroup "Expr"
         ],
         testGroup "While"
         [
-            testCase' "while true do 5" (While (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 5)),
-            testCase' "while fst (true, 1) do 5" (While (Fst $ SimpleExpr $ Pair (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 1)) (SimpleExpr $ Integer 5))
+            testCase' "while true do 5 end" (While (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 5)),
+            testCase' "while fst (true, 1) do 5 end" (While (Fst $ SimpleExpr $ Pair (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 1)) (SimpleExpr $ Integer 5))
         ],
         testGroup "Let"
         [

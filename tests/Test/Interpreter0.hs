@@ -106,17 +106,17 @@ interpreter0Tests = testGroup "Interpreter0"
         ],
         testGroup "Inl"
         [
-            testCase' "inl 5 : int + bool" (Inl $ Integer 5),
-            testCase' "inl (inl 5 : int + bool) : (int + bool) + unit" (Inl $ Inl $ Integer 5)
+            testCase' "inl bool 5" (Inl $ Integer 5),
+            testCase' "inl unit (inl bool 5)" (Inl $ Inl $ Integer 5)
         ],
         testGroup "Inr"
         [
-            testCase' "inr true : int + bool" (Inr $ Boolean True),
-            testCase' "inr () : (int + bool) + unit" (Inr Unit)
+            testCase' "inr int true" (Inr $ Boolean True),
+            testCase' "inr (int + bool) ()" (Inr Unit)
         ],
         testGroup "Case"
         [
-            testCase' "case inl 5 : int + bool of inl (x : int) -> true | inr (x : bool) -> x end" (Boolean True)
+            testCase' "case inl bool 5 of inl (x : int) -> true | inr (x : bool) -> x end" (Boolean True)
         ],
         testGroup "Fst"
         [
@@ -130,7 +130,7 @@ interpreter0Tests = testGroup "Interpreter0"
         ],
         testGroup "While"
         [
-            testCase' "while false do 5" Unit
+            testCase' "while false do 5 end" Unit
         ],
         testGroup "Let"
         [
@@ -154,7 +154,7 @@ interpreter0Tests = testGroup "Interpreter0"
         [
             testCase' "fun (x : int) -> x end" (Fun "x" (A.Variable "x")),
             testCase' "fun (x : int) -> true end" (Fun "x" (A.Boolean True)),
-            testCase' "fun (x : int) -> (fun (y : int) -> x + y end) end 4 3" (Fun "x" (A.Variable "x"))
+            testCase' "fun (x : int) -> (fun (y : int) -> x + y end) end 4 3" (Integer 7)
         ],
         testGroup "Apply"
         [

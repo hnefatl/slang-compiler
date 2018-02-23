@@ -37,9 +37,9 @@ data Expr   = UnaryOp UOp Expr
 
             | If Expr Expr Expr
 
-            | Inl Expr Type  -- inl 5    : int + bool
-            | Inr Expr Type  -- inr true : int + bool
-            | Case Expr Expr Expr -- case inl 5 : int + bool of (inl x : int) -> true | (inr x : bool) -> x end
+            | Inl Expr Type  -- inl bool 5
+            | Inr Expr Type  -- inr int true
+            | Case Expr Expr Expr -- case inl bool 5 of (inl x : int) -> true | (inr x : bool) -> x end
 
             | Fst Expr
             | Snd Expr

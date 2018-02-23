@@ -8,7 +8,7 @@ module Interpreters.Interpreter0
     Error
 ) where
 
-import Control.Monad (mapM, when)
+import Control.Monad (mapM, liftM, liftM2)
 import System.IO (hFlush, stdout)
 import qualified Data.Map as M
 
@@ -23,7 +23,8 @@ data Value = Unit
            | Pair Value Value
            | Inl Value
            | Inr Value
-           | Fun A.Variable (Value -> Value)
+           | Fun A.Variable A.Ast
+           deriving (Eq)
 
 instance Show Value where
     show Unit = "()"
@@ -35,7 +36,8 @@ instance Show Value where
     show (Inr v) = "inr " ++ show v
     show (Fun v e) = "\\" ++ v ++ " -> " ++ show e
 
-type SlangInterpreter0 = Interpreter0 A.Variable Value Error Value
+type SlangInterpreter0 = SlangInterpreter0' Value
+type SlangInterpreter0' a = Interpreter0 A.Variable Value Error a
 
 interpret :: A.Ast -> IO (Either Error Value)
 interpret = runInterpreter0 . interpret'
@@ -44,12 +46,7 @@ interpret' :: A.Ast -> SlangInterpreter0
 interpret'  A.Unit               = return Unit
 interpret' (A.Integer i)         = return $ Integer i
 interpret' (A.Boolean b)         = return $ Boolean b
-interpret' (A.Variable v)        = do
-                                    liftIO $ putStrLn ("Evaluation of " ++ v)
-                                    env <- getEnvironment
-                                    liftIO $ putStrLn ("Env: " ++ show env)
-                                    liftIO $ putStrLn ""
-                                    getValue' v
+interpret' (A.Variable v)        = getValue' v
 interpret' (A.Deref e)           = do
                                     Ref inner <- interpret' e
                                     getValue' inner
@@ -64,7 +61,6 @@ interpret' (A.UnaryOp op e)      = do
                                     val <- (interpret' e)
                                     interpretUOp op val
 interpret' (A.BinaryOp op l r)   = do
-                                    liftIO $ putStrLn "BinaryOp"
                                     lv <- (interpret' l)
                                     rv <- (interpret' r)
                                     interpretBOp op lv rv
@@ -108,20 +104,14 @@ interpret' (A.Let n e1 e2)       = do
                                     v <- interpret' e1
                                     local n v (interpret' e2)
 interpret' (A.LetFun n f e)      = do
-                                    liftIO $ putStrLn "LetFun"
                                     fv <- interpret' f
                                     local n fv (interpret' e) 
 interpret' (A.Fun x e)           = return $ Fun x e
 interpret' (A.Application e1 e2) = do
-                                    liftIO $ putStrLn ("Application of " ++ show e1 ++ " to " ++ show e2)
                                     -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
                                     x <- interpret' e2
                                     f <- interpret' e1
                                     apply f x
-                                    --f1@(Fun arg body) <- interpret' e1
-                                    --f2@(Fun _ newBody) <- interpret' body
-                                    --r <- apply (A.Fun arg newBody) x
-                                    --return r
 interpret' A.Input               = do
                                     liftIO (putStr "Input> ")
                                     liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
@@ -152,15 +142,47 @@ getValue' :: A.Variable -> SlangInterpreter0
 getValue' k = getValueE k ("Couldn't find variable with name " ++ show k ++ " in environment")
 
 apply :: Value -> Value -> SlangInterpreter0
-apply f@(Fun v e) x = do
-                        liftIO $ putStrLn ("Actual Application of " ++ show f ++ " to " ++ show x)
-                        env <- getEnvironment
-                        liftIO $ putStrLn ("Env: " ++ show env)
-                        res <- local v x (interpret' e)
-                        liftIO $ putStrLn ("Res: " ++ show res)
-                        liftIO $ putStrLn ""
-                        return res
+apply (Fun v e) x = do
+                        x' <- valueToAst x
+                        let e' = updateVariable v x' e
+                        local v x (interpret' e')
 apply f x = runtimeError ("Compiler Error: apply shouldn't have been called on " ++ show f ++ " with " ++ show x)
+
+updateVariable :: A.Variable -> A.Ast -> A.Ast -> A.Ast
+updateVariable var val tree = updateVariable' tree
+    where
+        updateVariable' a@(A.Variable n) = if n == var then val else a
+        updateVariable' a@A.Unit = a
+        updateVariable' a@(A.Integer _) = a
+        updateVariable' a@(A.Boolean _) = a
+        updateVariable' a@(A.Input) = a
+        updateVariable' (A.Deref e) = A.Deref (updateVariable' e)
+        updateVariable' (A.Ref e) = A.Ref (updateVariable' e)
+        updateVariable' (A.Pair l r) = A.Pair (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.UnaryOp op e) = (A.UnaryOp op) (updateVariable' e)
+        updateVariable' (A.BinaryOp op l r) = (A.BinaryOp op) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Sequence es) = A.Sequence (map updateVariable' es)
+        updateVariable' (A.If c l r) = A.If (updateVariable' c) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Inl e) = A.Inl (updateVariable' e)
+        updateVariable' (A.Inr e) = A.Inr (updateVariable' e)
+        updateVariable' (A.Case e l r) = A.Case (updateVariable' e) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Fst e) = A.Fst (updateVariable' e)
+        updateVariable' (A.Snd e) = A.Snd (updateVariable' e)
+        updateVariable' (A.While c e) = A.While (updateVariable' c) (updateVariable' e)
+        updateVariable' (A.Let v b e) = (A.Let v) (updateVariable' b) (updateVariable' e)
+        updateVariable' (A.LetFun v b e) = (A.LetFun v) (updateVariable' b) (updateVariable' e)
+        updateVariable' (A.Fun v e) = (A.Fun v) (updateVariable' e)
+        updateVariable' (A.Application e1 e2) = A.Application (updateVariable' e1) (updateVariable' e2)
+
+valueToAst :: Value -> SlangInterpreter0' A.Ast
+valueToAst Unit = return A.Unit
+valueToAst (Integer i) = return $ A.Integer i
+valueToAst (Boolean b) = return $ A.Boolean b
+valueToAst (Ref n) = liftM A.Ref (getValueE n "Compiler Error: Value of ref not found" >>= valueToAst)
+valueToAst (Pair l r) = liftM2 A.Pair (valueToAst l) (valueToAst r)
+valueToAst (Inl l) = liftM A.Inl (valueToAst l)
+valueToAst (Inr r) = liftM A.Inr (valueToAst r)
+valueToAst (Fun x e) = return $ A.Fun x e
 
 makeRef :: Value -> SlangInterpreter0
 makeRef v = do
