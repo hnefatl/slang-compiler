@@ -114,11 +114,11 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | Expr '||' Expr                                        { E.BoolBinaryOp E.OpOr $1 $3 }
         | begin ExprList end                                    { E.Sequence $2 }
         | if Expr then Expr else Expr end                       { E.If $2 $4 $6 }
-        | while Expr do Expr                                    { E.While $2 $4 }
+        | while Expr do Expr end                                { E.While $2 $4 }
         | fst Expr  %prec uminus                                { E.Fst $2 }
         | snd Expr  %prec uminus                                { E.Snd $2 }
-        | inl Expr ':' Type                                     { E.Inl $2 $4 }
-        | inr Expr ':' Type                                     { E.Inr $2 $4 }
+        | inl Type Expr                                         { E.Inl $3 $2 }
+        | inr Type Expr                                         { E.Inr $3 $2 }
         | input                                                 { E.Input }
         | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun $3 $5 $8 }
         | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
@@ -154,7 +154,7 @@ Type :: { T.Type }
 Type    : inttype           { T.Integer }
         | booltype          { T.Boolean }
         | unittype          { T.Unit }
-        | ref Type          { T.Ref $2 }
+        | Type ref          { T.Ref $1 }
         | Type '->' Type    { T.Fun $1 $3 }
         | Type '*' Type     { T.Product $1 $3 }
         | Type '+' Type     { T.Union $1 $3 }

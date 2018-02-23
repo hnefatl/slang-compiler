@@ -44,14 +44,12 @@ inferType (E.If e1 e2 e3)             = do
                                             restrictedInfer_ T.isBoolean "Condition of if-statement is non-boolean" inferType e1
                                             tType <- inferType e2
                                             restrictedInfer (== tType) "Branches of if-statement don't have the same type" inferType e3
-inferType (E.Inl e (T.Union lt rt))   = do
-                                            restrictedInfer_ (== lt) "Expression in inl must match left side of union type" inferType e
+inferType (E.Inl e rt)                = do
+                                            lt <- inferType e
                                             return $ T.Union lt rt
-inferType (E.Inl _ _)                 = typeError "Expected union-type in inl"
-inferType (E.Inr e (T.Union lt rt))   = do
-                                            restrictedInfer_ (== rt) "Expression in inr must match right side of union type" inferType e
+inferType (E.Inr e lt)                = do
+                                            rt <- inferType e
                                             return $ T.Union lt rt
-inferType (E.Inr _ _)                 = typeError "Expected union-type in inr"
 inferType (E.Input)                   = return T.Integer
 inferType (E.Case e fl fr)            = do   
                                             T.Union lArg rArg <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e

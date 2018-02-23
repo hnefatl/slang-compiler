@@ -4,7 +4,6 @@ module Interpreters.Ast
     UOp(..),
     BOp(..),
     Variable,
-    Lambda(..),
     translate
 ) where
 
@@ -19,7 +18,6 @@ data UOp = Neg | Not  deriving (Eq, Show)
 data BOp = Add | Sub | Mul | Div | And | Or | Equal | Less | Assign deriving (Eq, Show)
 
 type Variable = String
-data Lambda = Lambda Variable Ast deriving (Eq, Show)
 
 data Ast = Unit
          | Integer Integer
@@ -34,13 +32,13 @@ data Ast = Unit
          | If Ast Ast Ast
          | Inl Ast
          | Inr Ast
-         | Case Ast Lambda Lambda
+         | Case Ast Ast Ast
          | Fst Ast
          | Snd Ast
          | While Ast Ast
          | Let Variable Ast Ast
-         | LetFun Variable Lambda Ast
-         | Fun Lambda
+         | LetFun Variable Ast Ast
+         | Fun Variable Ast
          | Application Ast Ast
          | Input
          deriving (Eq, Show)
@@ -54,13 +52,13 @@ translate (E.Sequence es) = Sequence (map translate es)
 translate (E.If c l r) = If (translate c) (translate l) (translate r)
 translate (E.Inl e _) = Inl (translate e)
 translate (E.Inr e _) = Inr (translate e)
-translate (E.Case e l r) = Case (translate e) (translateLambda l) (translateLambda r)
+translate (E.Case e l r) = Case (translate e) (translate l) (translate r)
 translate (E.Fst e) = Fst (translate e)
 translate (E.Snd e) = Snd (translate e)
 translate (E.While c e) = While (translate c) (translate e)
 translate (E.Let n _ v e) = Let n (translate v) (translate e)
-translate (E.LetFun n f _ e) = LetFun n (translateLambda f) (translate e)
-translate e@(E.Fun _ _ _) = Fun (translateLambda e)
+translate (E.LetFun n f _ e) = LetFun n (translate f) (translate e)
+translate (E.Fun x _ e) = Fun x (translate e)
 translate (E.Application f e) = Application (translate f) (translateSimpleExpr e)
 translate E.Input = Input
 translate (E.SimpleExpr e) = translateSimpleExpr e
@@ -75,10 +73,6 @@ translateSimpleExpr (E.Ref e) = Ref (translateSimpleExpr e)
 translateSimpleExpr (E.Pair l r) = Pair (translate l) (translate r)
 translateSimpleExpr (E.Expr e) = translate e
 
-
-translateLambda :: E.Expr -> Lambda
-translateLambda (E.Fun x _ e) = Lambda x (translate e)
-translateLambda e = error ("Compiler error: Got a " ++ show e ++ " where a lambda was expected.")
 
 translateUOp :: E.UOp -> UOp
 translateUOp E.OpNot = Not

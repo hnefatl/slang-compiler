@@ -63,3 +63,5 @@ tests:
     - tasty-hunit
     - tasty-quickcheck
     - QuickCheck
+    - directory
+    - filepath

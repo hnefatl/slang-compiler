@@ -8,7 +8,7 @@ module Interpreters.Interpreter0
     Error
 ) where
 
-import Control.Monad (mapM)
+import Control.Monad (mapM, when)
 import System.IO (hFlush, stdout)
 import qualified Data.Map as M
 
@@ -23,8 +23,7 @@ data Value = Unit
            | Pair Value Value
            | Inl Value
            | Inr Value
-           | Fun A.Lambda
-           deriving (Eq)
+           | Fun A.Variable (Value -> Value)
 
 instance Show Value where
     show Unit = "()"
@@ -34,7 +33,7 @@ instance Show Value where
     show (Pair l r) = "(" ++ show l ++ ", " ++ show r ++ ")"
     show (Inl v) = "inl " ++ show v
     show (Inr v) = "inr " ++ show v
-    show (Fun (A.Lambda v b)) = "\\" ++ show v ++ " -> " ++ show b
+    show (Fun v e) = "\\" ++ v ++ " -> " ++ show e
 
 type SlangInterpreter0 = Interpreter0 A.Variable Value Error Value
 
@@ -45,7 +44,12 @@ interpret' :: A.Ast -> SlangInterpreter0
 interpret'  A.Unit               = return Unit
 interpret' (A.Integer i)         = return $ Integer i
 interpret' (A.Boolean b)         = return $ Boolean b
-interpret' (A.Variable v)        = getValue' v
+interpret' (A.Variable v)        = do
+                                    liftIO $ putStrLn ("Evaluation of " ++ v)
+                                    env <- getEnvironment
+                                    liftIO $ putStrLn ("Env: " ++ show env)
+                                    liftIO $ putStrLn ""
+                                    getValue' v
 interpret' (A.Deref e)           = do
                                     Ref inner <- interpret' e
                                     getValue' inner
@@ -60,6 +64,7 @@ interpret' (A.UnaryOp op e)      = do
                                     val <- (interpret' e)
                                     interpretUOp op val
 interpret' (A.BinaryOp op l r)   = do
+                                    liftIO $ putStrLn "BinaryOp"
                                     lv <- (interpret' l)
                                     rv <- (interpret' r)
                                     interpretBOp op lv rv
@@ -79,8 +84,12 @@ interpret' (A.Inr e)             = do
 interpret' (A.Case e l r)        = do
                                     ev <- interpret' e
                                     case ev of
-                                        Inl v   -> doApply l v
-                                        Inr v   -> doApply r v
+                                        Inl v   -> do
+                                                    lf <- interpret' l
+                                                    apply lf v
+                                        Inr v   -> do
+                                                    rf <- interpret' r
+                                                    apply rf v
                                         _       -> runtimeError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
 interpret' (A.Fst e)             = do
                                     Pair l _ <- interpret' e
@@ -98,16 +107,24 @@ interpret' orig@(A.While c e)    = do
 interpret' (A.Let n e1 e2)       = do
                                     v <- interpret' e1
                                     local n v (interpret' e2)
-interpret' (A.LetFun n f e)      = local n (Fun f) (interpret' e) 
-interpret' (A.Fun l)             = return $ Fun l
+interpret' (A.LetFun n f e)      = do
+                                    liftIO $ putStrLn "LetFun"
+                                    fv <- interpret' f
+                                    local n fv (interpret' e) 
+interpret' (A.Fun x e)           = return $ Fun x e
 interpret' (A.Application e1 e2) = do
+                                    liftIO $ putStrLn ("Application of " ++ show e1 ++ " to " ++ show e2)
                                     -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
                                     x <- interpret' e2
-                                    (Fun f) <- interpret' e1
-                                    doApply f x
+                                    f <- interpret' e1
+                                    apply f x
+                                    --f1@(Fun arg body) <- interpret' e1
+                                    --f2@(Fun _ newBody) <- interpret' body
+                                    --r <- apply (A.Fun arg newBody) x
+                                    --return r
 interpret' A.Input               = do
                                     liftIO (putStr "Input> ")
-                                    liftIO (hFlush stdout) -- No newline, so explicitly flush
+                                    liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
                                     v <- liftIO readLn
                                     return (Integer v)
 
@@ -130,9 +147,20 @@ interpretBOp A.Assign (Ref l) v = do setValue l v
                                      return Unit
 interpretBOp op l r = runtimeError ("Compiler Error: " ++ show op ++ " on " ++ show l ++ " and " ++ show r)
 
--- A version of interpret'er0.getValue that has a standard error message
+-- A version of Interpreter0.getValue that has a standard error message
 getValue' :: A.Variable -> SlangInterpreter0
 getValue' k = getValueE k ("Couldn't find variable with name " ++ show k ++ " in environment")
+
+apply :: Value -> Value -> SlangInterpreter0
+apply f@(Fun v e) x = do
+                        liftIO $ putStrLn ("Actual Application of " ++ show f ++ " to " ++ show x)
+                        env <- getEnvironment
+                        liftIO $ putStrLn ("Env: " ++ show env)
+                        res <- local v x (interpret' e)
+                        liftIO $ putStrLn ("Res: " ++ show res)
+                        liftIO $ putStrLn ""
+                        return res
+apply f x = runtimeError ("Compiler Error: apply shouldn't have been called on " ++ show f ++ " with " ++ show x)
 
 makeRef :: Value -> SlangInterpreter0
 makeRef v = do
@@ -143,6 +171,3 @@ makeRef v = do
 
 makeUnusedRefName :: M.Map A.Variable Value -> A.Variable
 makeUnusedRefName m = "$" ++ (show $ M.size m)
-
-doApply :: A.Lambda -> Value -> SlangInterpreter0
-doApply (A.Lambda x e) y = local x y (interpret' e)
