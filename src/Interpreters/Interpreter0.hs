@@ -128,7 +128,7 @@ makeRef v = do
                 env <- getEnvironment
                 let refName = makeUnusedRefName env
                 setValue refName v
-                return Unit
+                return (Ref refName)
 
 makeUnusedRefName :: M.Map A.Variable Value -> A.Variable
 makeUnusedRefName m = "$" ++ (show $ M.size m)

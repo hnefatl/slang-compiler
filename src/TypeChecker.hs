@@ -58,15 +58,15 @@ inferType (E.Inr e (T.Union lt rt))   = do
                                         return $ T.Union lt rt
 inferType (E.Inr _ _)                 = typeError "Expected union-type in inr"
 inferType (E.Case e fl fr)            = do   
-                                         (T.Union lArg rArg) <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
-                                         (T.Fun _ lRet) <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
+                                         T.Union lArg rArg <- restrictedInfer T.isUnion "Expression in case statement must have type union" inferType e
+                                         T.Fun _ lRet <- restrictedInfer (== T.Fun lArg T.Any) ("Expression in inl branch of case statement must have type " ++ show lArg ++ " -> *") inferType fl
                                          restrictedInfer (== T.Fun rArg lRet) ("Expression in inr branch of case statement must have type " ++ show rArg ++ " -> " ++ show lRet) inferType fr
                                          return lRet
 inferType (E.Fst e)                   = do
-                                         (T.Product t _) <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
+                                         T.Product t _ <- restrictedInfer T.isProduct "Expression in fst statement must have product type" inferType e
                                          return t
 inferType (E.Snd e)                   = do
-                                         (T.Product _ t) <- restrictedInfer T.isProduct "Expression in snd statement must have product type" inferType e
+                                         T.Product _ t <- restrictedInfer T.isProduct "Expression in snd statement must have product type" inferType e
                                          return t
 inferType (E.While e1 e2)             = do
                                          restrictedInfer (T.isBoolean) "Condition in while loop must have boolean type" inferType e1
@@ -86,7 +86,7 @@ inferType (E.LetRecFun _ _ _ _)       = typeError "Expected fun type in let rec 
 inferType (E.Fun v t e)               = do innerType <- inModifiedEnv (M.insert v t) (inferType e)
                                            return $ T.Fun t innerType
 inferType (E.Application f x)         = do
-                                        (T.Fun fArg fRet) <- restrictedInfer (T.isFun) "Expected function in application" inferType f
+                                        T.Fun fArg fRet <- restrictedInfer (T.isFun) "Expected function in application" inferType f
                                         restrictedInfer (== fArg) "Function applied to value of wrong type" inferTypeSimple x
                                         return fRet
 
@@ -105,7 +105,9 @@ inferTypeSimple (E.Identifier name) = do
 inferTypeSimple (E.Ref e)           = do
                                         innerType <- inferTypeSimple e
                                         return (T.Ref innerType)
-inferTypeSimple (E.Deref e)         = restrictedInfer T.isRef "Dereferencing a non-reference" inferTypeSimple e
+inferTypeSimple (E.Deref e)         = do
+                                        T.Ref t <- restrictedInfer T.isRef "Dereferencing a non-reference" inferTypeSimple e
+                                        return t
 inferTypeSimple (E.Pair l r)        = do
                                         lType <- inferType l
                                         rType <- inferType r

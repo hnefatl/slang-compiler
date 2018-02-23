@@ -26,11 +26,16 @@ parserTests = testGroup "Parser"
 simpleExprTests :: TestTree
 simpleExprTests = testGroup "SimpleExpr"
     [
-        testCase "Unit" $ parse "()" @?= (Right . SimpleExpr) Unit,
+        testCase' "()" (SimpleExpr Unit),
         testProperty "Integer" $ forAll integers $ \(i,s) -> parse s === (Right . SimpleExpr . Integer) i,
         testProperty "Boolean" $ forAll booleans $ \(b,s) -> parse s === (Right . SimpleExpr . Boolean) b,
-        testProperty "Identifer" $ forAll identifiers $ \i -> parse i == (Right . SimpleExpr . Identifier) i
-
+        testProperty "Identifer" $ forAll identifiers $ \i -> parse i == (Right . SimpleExpr . Identifier) i,
+        testCase' "(1, 2)" (SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Integer 2)),
+        testCase' "(1, true)" (SimpleExpr $ Pair (SimpleExpr $ Integer 1) (SimpleExpr $ Boolean True)),
+        testCase' "ref 5" (SimpleExpr $ Ref $ Integer 5),
+        testCase' "ref true" (SimpleExpr $ Ref $ Boolean True),
+        testCase' "!ref 5" (SimpleExpr $ Deref $ Ref $ Integer 5),
+        testCase' "!(ref true)" (SimpleExpr $ Deref $ Expr $ SimpleExpr $ Ref $ Boolean True)
     ]
 
 exprTests :: TestTree

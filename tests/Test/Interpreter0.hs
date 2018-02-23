@@ -73,6 +73,21 @@ interpreter0Tests = testGroup "Interpreter0"
             testCase' "5 < 4" (Boolean False),
             testCase' "0 < 2" (Boolean True)
         ],
+        testGroup "Pair"
+        [
+            testCase' "(1, 2)" (Pair (Integer 1) (Integer 2)),
+            testCase' "(1, true)" (Pair (Integer 1) (Boolean True))
+        ],
+        testGroup "Ref"
+        [
+            testCase' "ref 5" (Ref "$0"),
+            testCase' "ref true" (Ref "$0")
+        ],
+        testGroup "Deref"
+        [
+            testCase' "!ref 5" (Integer 5),
+            testCase' "!(ref true)" (Boolean True)
+        ],
         testGroup "Sequence"
         [
             testCase' "begin 5 ; true end" (Boolean True),

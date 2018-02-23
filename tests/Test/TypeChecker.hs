@@ -29,9 +29,15 @@ typecheckerTests = testGroup "TypeChecker"
 simpleExprTests :: TestTree
 simpleExprTests = testGroup "SimpleExpr"
     [
-        testCase "Unit" $ typecheck' "()" @?= Right Unit,
+        testCase' "()" Unit,
         testProperty "Integer" $ forAll integers $ \(_,s) -> typecheck' s === (Right Integer),
-        testProperty "Boolean" $ forAll booleans $ \(_,s) -> typecheck' s === (Right Boolean)
+        testProperty "Boolean" $ forAll booleans $ \(_,s) -> typecheck' s === (Right Boolean),
+        testCase' "(1, 2)" (Product Integer Integer),
+        testCase' "(1, true)" (Product Integer Boolean),
+        testCase' "ref 5" (Ref Integer),
+        testCase' "ref true" (Ref Boolean),
+        testCase' "!ref 5" Integer,
+        testCase' "!(ref true)" Boolean
     ]
 
 exprTests :: TestTree
