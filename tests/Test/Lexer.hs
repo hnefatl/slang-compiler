@@ -79,6 +79,8 @@ lexerTests = testGroup "Lexer" $
 
         testCase' "(* Hello *)" EOF,
         testCase' "(* foo (* bar *) baz *)" EOF,
+        testCase' "(*\nHello\n*)" EOF,
+        testCase' "(* foo \n(* bar \n*) baz \n*)" EOF,
 
         testCase' "int" IntType,
         testCase' "bool" BoolType,

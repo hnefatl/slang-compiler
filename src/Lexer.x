@@ -30,6 +30,7 @@ $alpha = [a-zA-Z]
 @natural = $digit+
 @boolean = (true) | (false)
 @identifier = $alpha [$alpha $digit \']*
+@commentskippable = @whitespace | .*
 
 tokens :-
     @whitespace         ;  -- Skip whitespace
@@ -91,7 +92,7 @@ tokens :-
     "bool"              { makeConstAlexToken T.BoolType }
     "unit"              { makeConstAlexToken T.UnitType }
 
-    "(*" .* "*)"        ;
+    "(*" @commentskippable* "*)"        ;
 
     @identifier         { makeAlexToken T.Identifier }
     
