@@ -20,7 +20,6 @@ import Data.Either (either)
 import qualified Lexer.Tokens as T
 }
 
-
 %wrapper "monad"
 
 $digit = 0-9
@@ -91,6 +90,8 @@ tokens :-
     "int"               { makeConstAlexToken T.IntType }
     "bool"              { makeConstAlexToken T.BoolType }
     "unit"              { makeConstAlexToken T.UnitType }
+
+    "(*" .* "*)"        ;
 
     @identifier         { makeAlexToken T.Identifier }
     

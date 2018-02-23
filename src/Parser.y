@@ -9,10 +9,6 @@ import qualified Lexer.Tokens as L
 
 import qualified Parser.Types as T
 import qualified Parser.Expressions as E
-
--- Need to fix shift/reduce conflicts
--- https://github.com/Timothy-G-Griffin/cc_cl_cam_ac_uk/blob/master/slang/parser.mly
-
 }
 
 %name slangParse
