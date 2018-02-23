@@ -38,7 +38,7 @@ ghc-options:
 - -Wall
 
 executables:
-  slang-compiler-exe:
+  slangc:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -47,6 +47,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - slang-compiler
+    - lens
 
 tests:
   compiler-test:

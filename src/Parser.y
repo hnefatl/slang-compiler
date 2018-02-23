@@ -9,6 +9,8 @@ import qualified Lexer.Tokens as L
 
 import qualified Parser.Types as T
 import qualified Parser.Expressions as E
+
+import Common
 }
 
 %name slangParse
@@ -55,7 +57,6 @@ import qualified Parser.Expressions as E
     else        { (L.Else, _) }
 
     let         { (L.Let, _) }
-    rec         { (L.Rec, _) }
     in          { (L.In, _) }
 
     fun         { (L.Fun, _) }
@@ -71,6 +72,8 @@ import qualified Parser.Expressions as E
     boolean     { (L.Boolean $$, _) }
 
     identifier  { (L.Identifier $$, _) }
+
+    input       { (L.Input, _) }
 
     inttype     { (L.IntType, _) }
     booltype    { (L.BoolType, _) }
@@ -116,14 +119,12 @@ Expr    : SimpleExpr                                            { E.SimpleExpr $
         | snd Expr  %prec uminus                                { E.Snd $2 }
         | inl Expr ':' Type                                     { E.Inl $2 $4 }
         | inr Expr ':' Type                                     { E.Inr $2 $4 }
+        | input                                                 { E.Input }
         | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun $3 $5 $8 }
         | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
 
         | let identifier '(' identifier ':' Type ')'
                     ':' Type '=' Expr in Expr end               { E.LetFun $2 (E.Fun $4 $6 $11) $9 $13 }
-
-        | let rec identifier '(' identifier ':' Type ')'
-                    ':' Type '=' Expr in Expr end               { E.LetRecFun $3 (E.Fun $5 $7 $12) $10 $14 }
 
         | case Expr of
                 inl '(' identifier ':' Type ')' '->' Expr
@@ -169,6 +170,6 @@ lexerWrapper f = do
         token <- alexMonadScan
         f token
     
-parse :: String -> Either String E.Expr
+parse :: String -> Either Error E.Expr
 parse s = runAlex s slangParse
 }

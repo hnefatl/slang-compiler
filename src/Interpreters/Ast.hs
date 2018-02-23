@@ -40,7 +40,6 @@ data Ast = Unit
          | While Ast Ast
          | Let Variable Ast Ast
          | LetFun Variable Lambda Ast
-         | LetRecFun Variable Lambda Ast
          | Fun Lambda
          | Application Ast Ast
          | Input
@@ -61,9 +60,9 @@ translate (E.Snd e) = Snd (translate e)
 translate (E.While c e) = While (translate c) (translate e)
 translate (E.Let n _ v e) = Let n (translate v) (translate e)
 translate (E.LetFun n f _ e) = LetFun n (translateLambda f) (translate e)
-translate (E.LetRecFun n f _ e) = LetRecFun n (translateLambda f) (translate e)
 translate e@(E.Fun _ _ _) = Fun (translateLambda e)
 translate (E.Application f e) = Application (translate f) (translateSimpleExpr e)
+translate E.Input = Input
 translate (E.SimpleExpr e) = translateSimpleExpr e
 
 translateSimpleExpr :: E.SimpleExpr -> Ast

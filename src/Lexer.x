@@ -18,6 +18,7 @@ import Data.Char (toLower, toUpper)
 import Data.Either (either)
 
 import qualified Lexer.Tokens as T
+import Common
 }
 
 %wrapper "monad"
@@ -70,7 +71,6 @@ tokens :-
     "else"              { makeConstAlexToken T.Else }
 
     "let"               { makeConstAlexToken T.Let }
-    "rec"               { makeConstAlexToken T.Rec }
     "in"                { makeConstAlexToken T.In }
 
     "fun"               { makeConstAlexToken T.Fun }
@@ -118,6 +118,6 @@ capitalise :: String -> String
 capitalise "" = ""
 capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
-tokenise :: String -> Either String Token
+tokenise :: String -> Either Error Token
 tokenise s = runAlex s alexMonadScan
 }

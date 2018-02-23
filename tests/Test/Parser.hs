@@ -123,11 +123,11 @@ exprTests = testGroup "Expr"
             testCase' "let id (x : int) : int = x in id end" (LetFun "id" (Fun "x" T.Integer (SimpleExpr $ Identifier "x")) T.Integer (SimpleExpr $ Identifier "id")),
             testCase' "let id (x : int) : int = x in id 5 end" (LetFun "id" (Fun "x" T.Integer (SimpleExpr $ Identifier "x")) T.Integer (Application (SimpleExpr $ Identifier "id") (Integer 5)))
         ],
-        testGroup "LetRecFun"
+        testGroup "LetFun Recursive"
         [
-            testCase' "let rec f(x : int) : int = if x = 0 then 1 else x * f x end in f 5 end" (LetRecFun "f" (Fun "x" T.Integer (If (BinaryOp OpEqual (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 0)) (SimpleExpr $ Integer 1) (ArithBinaryOp OpMul (SimpleExpr $ Identifier "x") (Application (SimpleExpr $ Identifier "f") (Identifier "x"))))) T.Integer (Application (SimpleExpr $ Identifier "f") (Integer 5))),
-            testCase' "let rec f(x : int) : int = if x < 1 then 1 else f (x - 1) + f (x - 2) end in f 5 end" $
-                    LetRecFun "f"
+            testCase' "let f(x : int) : int = if x = 0 then 1 else x * f x end in f 5 end" (LetFun "f" (Fun "x" T.Integer (If (BinaryOp OpEqual (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 0)) (SimpleExpr $ Integer 1) (ArithBinaryOp OpMul (SimpleExpr $ Identifier "x") (Application (SimpleExpr $ Identifier "f") (Identifier "x"))))) T.Integer (Application (SimpleExpr $ Identifier "f") (Integer 5))),
+            testCase' "let f(x : int) : int = if x < 1 then 1 else f (x - 1) + f (x - 2) end in f 5 end" $
+                    LetFun "f"
                             (Fun "x" T.Integer $
                                 If (BinaryOp OpLess (SimpleExpr $ Identifier "x") (SimpleExpr $ Integer 1))
                                     (SimpleExpr $ Integer 1)

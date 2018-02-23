@@ -140,9 +140,9 @@ interpreter0Tests = testGroup "Interpreter0"
         ],
         testGroup "LetRecFun"
         [
-            testCase' "let rec f(x : int) : int = if x = 0 then 1 else x * f (x - 1) end in f 5 end" (Integer 120),
-            testCase' "let rec f(x : int) : int = if x = 0 then 0 else begin f (x - 1) ; f (x - 1) end end in f 5 end" (Integer 0),
-            testCase' "let rec f(x : int) : int = if x < 3 then 1 else f (x - 1) + f (x - 2) end in f 5 end" (Integer 5)
+            testCase' "let f(x : int) : int = if x = 0 then 1 else x * f (x - 1) end in f 5 end" (Integer 120),
+            testCase' "let f(x : int) : int = if x = 0 then 0 else begin f (x - 1) ; f (x - 1) end end in f 5 end" (Integer 0),
+            testCase' "let f(x : int) : int = if x < 3 then 1 else f (x - 1) + f (x - 2) end in f 5 end" (Integer 5)
         ],
         testGroup "Fun"
         [

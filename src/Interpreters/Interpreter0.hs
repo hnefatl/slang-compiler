@@ -9,8 +9,10 @@ module Interpreters.Interpreter0
 ) where
 
 import Control.Monad (mapM)
+import System.IO (hFlush, stdout)
 import qualified Data.Map as M
 
+import Common
 import qualified Interpreters.Ast as A
 import Interpreters.Interpreter0Monad
 
@@ -22,9 +24,18 @@ data Value = Unit
            | Inl Value
            | Inr Value
            | Fun A.Lambda
-           deriving (Eq, Show)
+           deriving (Eq)
 
-type Error = String
+instance Show Value where
+    show Unit = "()"
+    show (Integer i) = show i
+    show (Boolean b) = if b then "true" else "false"
+    show (Ref n) = "ref " ++ n
+    show (Pair l r) = "(" ++ show l ++ ", " ++ show r ++ ")"
+    show (Inl v) = "inl " ++ show v
+    show (Inr v) = "inr " ++ show v
+    show (Fun (A.Lambda v b)) = "\\" ++ show v ++ " -> " ++ show b
+
 type SlangInterpreter0 = Interpreter0 A.Variable Value Error Value
 
 interpret :: A.Ast -> IO (Either Error Value)
@@ -88,7 +99,6 @@ interpret' (A.Let n e1 e2)       = do
                                     v <- interpret' e1
                                     local n v (interpret' e2)
 interpret' (A.LetFun n f e)      = local n (Fun f) (interpret' e) 
-interpret' (A.LetRecFun n f e)   = local n (Fun f) (interpret' e) 
 interpret' (A.Fun l)             = return $ Fun l
 interpret' (A.Application e1 e2) = do
                                     -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
@@ -96,7 +106,8 @@ interpret' (A.Application e1 e2) = do
                                     (Fun f) <- interpret' e1
                                     doApply f x
 interpret' A.Input               = do
-                                    liftIO (putStrLn "Input> ")
+                                    liftIO (putStr "Input> ")
+                                    liftIO (hFlush stdout) -- No newline, so explicitly flush
                                     v <- liftIO readLn
                                     return (Integer v)
 

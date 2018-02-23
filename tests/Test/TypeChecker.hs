@@ -120,8 +120,8 @@ exprTests = testGroup "Expr"
         ],
         testGroup "LetRecFun"
         [
-            testCase' "let rec f(x : int) : int = if x = 0 then 1 else x * f (x - 1) end in f 5 end" Integer,
-            testCase' "let rec f(x : int) : int = if x < 3 then 1 else f (x - 1) + f (x - 2) end in f 5 end" Integer
+            testCase' "let f(x : int) : int = if x = 0 then 1 else x * f (x - 1) end in f 5 end" Integer,
+            testCase' "let f(x : int) : int = if x < 3 then 1 else f (x - 1) + f (x - 2) end in f 5 end" Integer
         ],
         testGroup "Fun"
         [

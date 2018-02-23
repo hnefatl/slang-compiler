@@ -40,7 +40,6 @@ data TokenClass = LParen
                 | Else
 
                 | Let
-                | Rec
                 | In
 
                 | Fun
