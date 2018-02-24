@@ -72,7 +72,9 @@ exprTests = testGroup "Expr"
             testCase' "true = false" (BinaryOp OpEqual (SimpleExpr $ Boolean True) (SimpleExpr $ Boolean False)),
             testCase' "() = ()" (BinaryOp OpEqual (SimpleExpr Unit) (SimpleExpr Unit)),
             testCase' "5 < 4" (BinaryOp OpLess (SimpleExpr $ Integer 5) (SimpleExpr $ Integer 4)),
-            testCase' "true < 4" (BinaryOp OpLess (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 4))
+            testCase' "true < 4" (BinaryOp OpLess (SimpleExpr $ Boolean True) (SimpleExpr $ Integer 4)),
+            testCase' "x := !x" (BinaryOp OpAssign (SimpleExpr $ Identifier "x") (SimpleExpr $ Deref $ Identifier "x")),
+            testCase' "x := !x + 1" (BinaryOp OpAssign (SimpleExpr $ Identifier "x") (ArithBinaryOp OpAdd (SimpleExpr $ Deref $ Identifier "x") (SimpleExpr $ Integer 1)))
         ],
         testGroup "Sequence"
         [

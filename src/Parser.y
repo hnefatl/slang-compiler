@@ -81,9 +81,9 @@ import Common
 
 
 -- Lowest precedence
+%left ':='
 %left '+' '-'
 %left '*' '/' '&&' '||' '=' '->' '<'
-%left ':='
 
 %nonassoc negate
 

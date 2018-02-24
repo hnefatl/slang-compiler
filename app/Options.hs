@@ -8,8 +8,7 @@ module Options
 
 import Control.Monad.State
 import Control.Monad.Except
-import Control.Lens (set)
-import Control.Lens.TH
+import Control.Lens (makeLenses, set)
 
 import Common
 

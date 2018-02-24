@@ -66,7 +66,8 @@ exprTests = testGroup "Expr"
             testCase' "true = false" Boolean,
             testCase' "() = ()" Boolean,
             testCase' "5 < 4" Boolean,
-            testCaseInvert' "true < 4" Boolean
+            testCaseInvert' "true < 4" Boolean,
+            testCase' "let x : int ref = ref 0 in x := !x + 1 end" Unit
         ],
         testGroup "Sequence"
         [

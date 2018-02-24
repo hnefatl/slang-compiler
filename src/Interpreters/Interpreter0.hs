@@ -10,7 +10,7 @@ module Interpreters.Interpreter0
 
 import Control.Monad (mapM, liftM, liftM2)
 import System.IO (hFlush, stdout)
-import qualified Data.Map as M
+import System.Random (randomIO)
 
 import Common
 import qualified Interpreters.Ast as A
@@ -36,13 +36,12 @@ instance Show Value where
     show (Inr v) = "inr " ++ show v
     show (Fun v e) = "\\" ++ v ++ " -> " ++ show e
 
-type SlangInterpreter0 = SlangInterpreter0' Value
-type SlangInterpreter0' a = Interpreter0 A.Variable Value Error a
+type SlangInterpreter0 a = Interpreter0 A.Variable Value Error a
 
 interpret :: A.Ast -> IO (Either Error Value)
 interpret = runInterpreter0 . interpret'
 
-interpret' :: A.Ast -> SlangInterpreter0
+interpret' :: A.Ast -> SlangInterpreter0 Value
 interpret'  A.Unit               = return Unit
 interpret' (A.Integer i)         = return $ Integer i
 interpret' (A.Boolean b)         = return $ Boolean b
@@ -118,12 +117,12 @@ interpret' A.Input               = do
                                     v <- liftIO readLn
                                     return (Integer v)
 
-interpretUOp :: A.UOp -> Value -> SlangInterpreter0
+interpretUOp :: A.UOp -> Value -> SlangInterpreter0 Value
 interpretUOp A.Neg (Integer i) = return $ Integer (-i)
 interpretUOp A.Not (Boolean b) = return $ Boolean (not b)
 interpretUOp op v = runtimeError ("Compiler Error: " ++ show op ++ " on " ++ show v)
 
-interpretBOp :: A.BOp -> Value -> Value -> SlangInterpreter0
+interpretBOp :: A.BOp -> Value -> Value -> SlangInterpreter0 Value
 interpretBOp A.Add (Integer l) (Integer r) = return $ Integer (l + r)
 interpretBOp A.Sub (Integer l) (Integer r) = return $ Integer (l - r)
 interpretBOp A.Mul (Integer l) (Integer r) = return $ Integer (l * r)
@@ -138,16 +137,17 @@ interpretBOp A.Assign (Ref l) v = do setValue l v
 interpretBOp op l r = runtimeError ("Compiler Error: " ++ show op ++ " on " ++ show l ++ " and " ++ show r)
 
 -- A version of Interpreter0.getValue that has a standard error message
-getValue' :: A.Variable -> SlangInterpreter0
+getValue' :: A.Variable -> SlangInterpreter0 Value
 getValue' k = getValueE k ("Couldn't find variable with name " ++ show k ++ " in environment")
 
-apply :: Value -> Value -> SlangInterpreter0
+apply :: Value -> Value -> SlangInterpreter0 Value
 apply (Fun v e) x = do
                         x' <- valueToAst x
                         let e' = updateVariable v x' e
                         local v x (interpret' e')
 apply f x = runtimeError ("Compiler Error: apply shouldn't have been called on " ++ show f ++ " with " ++ show x)
 
+-- This is messy, but I've not found a nicer way to do it - can't use lenses as Ast isn't Traversable
 updateVariable :: A.Variable -> A.Ast -> A.Ast -> A.Ast
 updateVariable var val tree = updateVariable' tree
     where
@@ -174,7 +174,7 @@ updateVariable var val tree = updateVariable' tree
         updateVariable' (A.Fun v e) = (A.Fun v) (updateVariable' e)
         updateVariable' (A.Application e1 e2) = A.Application (updateVariable' e1) (updateVariable' e2)
 
-valueToAst :: Value -> SlangInterpreter0' A.Ast
+valueToAst :: Value -> SlangInterpreter0 A.Ast
 valueToAst Unit = return A.Unit
 valueToAst (Integer i) = return $ A.Integer i
 valueToAst (Boolean b) = return $ A.Boolean b
@@ -184,12 +184,17 @@ valueToAst (Inl l) = liftM A.Inl (valueToAst l)
 valueToAst (Inr r) = liftM A.Inr (valueToAst r)
 valueToAst (Fun x e) = return $ A.Fun x e
 
-makeRef :: Value -> SlangInterpreter0
+makeRef :: Value -> SlangInterpreter0 Value
 makeRef v = do
-                env <- getEnvironment
-                let refName = makeUnusedRefName env
+                refName <- makeUnusedRefName
                 setValue refName v
                 return (Ref refName)
 
-makeUnusedRefName :: M.Map A.Variable Value -> A.Variable
-makeUnusedRefName m = "$" ++ (show $ M.size m)
+makeUnusedRefName :: SlangInterpreter0 A.Variable
+makeUnusedRefName = do
+                        rand <- liftIO randomIO
+                        let name = "$" ++ show (rand :: Int)
+                        exists <- getValue name
+                        case exists of
+                            Nothing -> return name
+                            Just _  -> makeUnusedRefName

@@ -39,6 +39,11 @@ testCaseFails' s v = testCase s $ do
                         r <- interpret' s
                         r ~?= Right v
 
+testCond :: String -> (Value -> Bool) -> String -> TestTree
+testCond s p e = testCase s $ do
+                    Right r <- interpret' s
+                    assertBool e (p r)
+
 interpreter0Tests :: TestTree
 interpreter0Tests = testGroup "Interpreter0"
     [
@@ -85,13 +90,14 @@ interpreter0Tests = testGroup "Interpreter0"
         ],
         testGroup "Ref"
         [
-            testCase' "ref 5" (Ref "$0"),
-            testCase' "ref true" (Ref "$0")
+            testCond "ref 5" (\v -> case v of Ref _ -> True ; _ -> False) "Didn't get a reference value",
+            testCond "ref true" (\v -> case v of Ref _ -> True ; _ -> False) "Didn't get a reference value"
         ],
         testGroup "Deref"
         [
             testCase' "!ref 5" (Integer 5),
-            testCase' "!(ref true)" (Boolean True)
+            testCase' "!(ref true)" (Boolean True),
+            testCase' "let x : int ref = ref 0 in begin x := !x + 1 ; !x end end" (Integer 1)
         ],
         testGroup "Sequence"
         [
@@ -130,7 +136,8 @@ interpreter0Tests = testGroup "Interpreter0"
         ],
         testGroup "While"
         [
-            testCase' "while false do 5 end" Unit
+            testCase' "while false do 5 end" Unit,
+            testCase'("let x : int ref = ref 5 in let y : int ref = ref 1 in begin while 0 < !x do (begin y := !y * !x ; x := !x - 1 end) end ; !y end end end") (Integer 120)
         ],
         testGroup "Let"
         [
