@@ -14,6 +14,7 @@ import System.Random (randomIO)
 
 import Common
 import qualified Interpreters.Ast as A
+import qualified Interpreters as I (Result(..), ResultConvertible, convert)
 import Interpreters.Interpreter0Monad
 
 data Value = Unit
@@ -24,22 +25,22 @@ data Value = Unit
            | Inl Value
            | Inr Value
            | Fun A.Variable A.Ast
-           deriving (Eq)
+           deriving (Eq, Show)
 
-instance Show Value where
-    show Unit = "()"
-    show (Integer i) = show i
-    show (Boolean b) = if b then "true" else "false"
-    show (Ref n) = "ref " ++ n
-    show (Pair l r) = "(" ++ show l ++ ", " ++ show r ++ ")"
-    show (Inl v) = "inl " ++ show v
-    show (Inr v) = "inr " ++ show v
-    show (Fun v e) = "\\" ++ v ++ " -> " ++ show e
+instance I.ResultConvertible Value where
+    convert Unit        = Just $ I.Unit
+    convert (Integer i) = Just $ I.Integer i
+    convert (Boolean b) = Just $ I.Boolean b
+    convert (Ref _)     = Nothing
+    convert (Pair l r)  = liftM2 I.Pair (I.convert l) (I.convert r)
+    convert (Inl v)     = liftM I.Inl (I.convert v)
+    convert (Inr v)     = liftM I.Inr (I.convert v)
+    convert (Fun _ _)   = Nothing
 
 type SlangInterpreter0 a = Interpreter0 A.Variable Value Error a
 
 interpret :: A.Ast -> IO (Either Error Value)
-interpret = runInterpreter0 . interpret'
+interpret = runInterpreter0Monad . interpret'
 
 interpret' :: A.Ast -> SlangInterpreter0 Value
 interpret'  A.Unit               = return Unit

@@ -2,6 +2,12 @@
 
 module Test.Util
 (
+    Program,
+    TestResult,
+    TestInfo,
+    InterpreterName,
+    InterpreterInfo,
+    testInterpret,
     (~?=),
     alpha,
     alphaNum,
@@ -19,9 +25,26 @@ import Control.Applicative (liftA2)
 
 import Data.Char (toLower)
 
+import Common
 import Lexer (reservedTokens)
+import Interpreters
 
--- Inverted Tasty.HUnit assertion
+-- Useful types for the interpreter tests
+type TestResult = String
+type TestInfo = (FilePath, Program, TestResult)
+
+type InterpreterName = String
+type InterpreterInfo v = (InterpreterName, Interpreter v)
+
+-- Interpret a program, return Nothing if it ran correctly and otherwise return Just the error
+testInterpret :: Interpreter Result -> Program -> TestResult -> IO (Either Error Result)
+testInterpret interpreter program result = do
+                res <- runInterpreter interpreter program
+                case res of
+                    Left e  -> return $ Left e
+                    Right r -> return $ ifexpr (show r == result) (Right r) (Left $ "Expected: " ++ result ++ "\nGot:      " ++ show r)
+
+-- Inverted version of the Tasty.HUnit assertion @?=
 (~?=) :: (Eq a, Show a) => a -> a -> Assertion
 x ~?= y = do
         result <- try (x @?= y)

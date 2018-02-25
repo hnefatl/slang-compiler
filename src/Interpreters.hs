@@ -1,30 +1,66 @@
 module Interpreters
 (
-    runInterpreter0
+    Program,
+    Interpreter,
+    Result(..),
+    ResultConvertible,
+    convert,
+    runInterpreter,
+    execInterpreter
 ) where
 
 import qualified Interpreters.Ast as A
-import qualified Interpreters.Interpreter0 as I0
 
 import Common
 import Parser (parse)
 import TypeChecker (typecheck)
 
-runInterpreter :: Show a => String -> (A.Ast -> IO (Either Error a)) -> IO (Either Error a)
-runInterpreter program interpreter = do
-            let val = do
+type Program = String
+type Interpreter v = A.Ast -> IO (Either Error v)
+
+class ResultConvertible a where
+    convert :: a -> Maybe Result
+
+data Result = Unit
+            | Integer Integer
+            | Boolean Bool
+            | Pair Result Result
+            | Inl Result
+            | Inr Result
+            deriving Eq
+
+instance ResultConvertible Result where
+    convert = Just . id
+
+instance Show Result where
+    show Unit = "()"
+    show (Integer i) = show i
+    show (Boolean b) = if b then "true" else "false"
+    show (Pair l r) = "(" ++ show l ++ ", " ++ show r ++ ")"
+    show (Inl v) = "inl " ++ show v
+    show (Inr v) = "inr " ++ show v
+
+runInterpreter :: (Show a, ResultConvertible a) => Interpreter a -> Program -> IO (Either Error Result)
+runInterpreter interpreter program = do
+            let val = do -- Either monad
                     parsed <- parse program
                     _ <- typecheck parsed
                     return parsed
             case val of
                 Left e -> return $ Left e
-                Right parsed -> do
+                Right parsed -> do -- IO monad
                     output <- interpreter (A.translate parsed)
-                    return output
+                    case output of
+                        Left err     -> return $ Left err
+                        Right value -> case convert value of
+                                Nothing     -> return $ Left ("Invalid result from program: " ++ show value)
+                                Just result -> return $ Right result
 
-runInterpreter0 :: String -> IO ()
-runInterpreter0 prog = do
-            val <- runInterpreter prog I0.interpret
-            case val of
-                Left e  -> error e
-                Right v -> print v
+execInterpreter :: (Show a, ResultConvertible a) => Interpreter a -> Program -> IO ()
+execInterpreter interpreter program = do
+            output <- runInterpreter interpreter program
+            case output of
+                Left e  -> putStrLn e
+                Right v -> case convert v of
+                        Nothing -> putStrLn ("Output of program wasn't a valid Result: " ++ show v)
+                        Just x  -> print x

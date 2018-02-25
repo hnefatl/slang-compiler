@@ -10,7 +10,7 @@ module Interpreters.Interpreter0Monad
     removeValue,
     local,
     runtimeError,
-    runInterpreter0,
+    runInterpreter0Monad,
 
     liftIO -- Export liftIO from the Control.Monad.IO.Class module, as it's useful for doing IO actions in this monad
 ) where
@@ -59,5 +59,5 @@ local k v a = do
 runtimeError :: e -> Interpreter0 k v e a
 runtimeError = throwError
 
-runInterpreter0 :: Interpreter0 k v e a -> IO (Either e a)
-runInterpreter0 a = runExceptT $ evalStateT (run a) M.empty
+runInterpreter0Monad :: Interpreter0 k v e a -> IO (Either e a)
+runInterpreter0Monad a = runExceptT $ evalStateT (run a) M.empty
