@@ -3,21 +3,25 @@ import Test.Tasty
 import Test.Lexer
 import Test.Parser
 import Test.TypeChecker
-import Test.Interpreter0
+import qualified Test.Interpreter0 as I0
+import Test.FileTests
 
 main :: IO ()
 main = do
         ts <- tests
         defaultMain ts
 
+interpreters :: [InterpreterInfo]
+interpreters = [("Interpreter 0", interpreterWrapper I0.interpret')]
+
 tests :: IO TestTree
 tests = do
-            interp0FileTests <- interpreter0FileTests
+            fTests <- fileTests interpreters
             return $ testGroup "slang-compiler"
                 [
                     lexerTests,
                     parserTests,
                     typecheckerTests,
-                    interpreter0Tests,
-                    interp0FileTests
+                    I0.interpreterTests,
+                    fTests
                 ]

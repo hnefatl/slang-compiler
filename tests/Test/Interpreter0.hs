@@ -1,17 +1,13 @@
 module Test.Interpreter0
 (
-    interpreter0Tests,
-    interpreter0FileTests
+    interpreterTests,
+    interpret'
 ) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
 
 import Test.Util
-
-import System.Directory
-import System.FilePath
-import Control.Monad (forM, liftM)
 
 import qualified Interpreters.Ast as A
 import Interpreters.Interpreter0
@@ -44,8 +40,9 @@ testCond s p e = testCase s $ do
                     Right r <- interpret' s
                     assertBool e (p r)
 
-interpreter0Tests :: TestTree
-interpreter0Tests = testGroup "Interpreter0"
+
+interpreterTests :: TestTree
+interpreterTests = testGroup "Interpreter 0"
     [
         testCase' "()" Unit,
         testCase' "5" (Integer 5),
@@ -168,30 +165,3 @@ interpreter0Tests = testGroup "Interpreter0"
             testCase' "(fun (x : int) -> true end) 5" (Boolean True)
         ]
     ]
-
-interpreter0FileTests :: IO TestTree
-interpreter0FileTests = do
-                testData <- loadTestFiles
-                return $ testGroup "Interpreter 0 File Tests" $
-                    map (\(path, prog, res) -> fileTest path prog res) testData
-
-fileTest :: FilePath -> FileContents -> TestResult -> TestTree
-fileTest path program result = testCase path $ do
-                                    res <- interpret' program
-                                    case res of
-                                        Left e  -> assertFailure ("Expected: " ++ result ++ "\nGot:      " ++ show e)
-                                        Right v -> result @?= show v
-
-type FileContents = String
-type TestResult = String
-loadTestFiles :: IO [(FilePath, FileContents, TestResult)]
-loadTestFiles = do
-                    dir <- getCurrentDirectory
-                    let testDir = dir </> "tests/slang/"
-                    manifestContents <- liftM (map words . lines) $ readFile (testDir </> "manifest.txt")
-                    forM manifestContents $ \line -> do
-                        let fileName = head line
-                            testResult = unwords (tail line)
-                            filePath = testDir </> fileName <.> ".slang"
-                        program <- readFile filePath
-                        return (filePath, program, testResult)
