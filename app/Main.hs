@@ -17,4 +17,4 @@ main = do
                 Nothing   -> putStrLn "A file to be interpreted must be given"
                 Just path -> do
                     program <- readFile path
-                    when (_interpreter0 opt) $ execInterpreter I0.interpret program
+                    when (_interpreter0 opt) $ execInterpreter (convertInterpreterError I0.interpret) program

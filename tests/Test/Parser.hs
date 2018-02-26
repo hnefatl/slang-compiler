@@ -11,7 +11,7 @@ import qualified Parser.Types as T
 
 import Test.Util
 
-parse' :: Program -> Either Error (Expr ())
+parse' :: Program -> Either FrontEndError (Expr ())
 parse' program = parse program >>= return . stripExprState
 
 testCase' :: Program -> Expr () -> TestTree

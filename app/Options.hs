@@ -22,10 +22,10 @@ makeLenses ''Options
 defaultOptions :: Options
 defaultOptions = Options { _file = Nothing, _interpreter0 = False }
 
-parseOptions :: [String] -> Either Error Options
+parseOptions :: [String] -> Either FrontEndError Options
 parseOptions args = runExcept (execStateT (parseOption args) defaultOptions)
 
-parseOption :: [String] -> StateT Options (Except Error) ()
+parseOption :: [String] -> StateT Options (Except FrontEndError) ()
 parseOption ("-I0":args) = modify (set interpreter0 True) >> parseOption args
 parseOption [filePath]   = modify (set file (Just filePath))
 parseOption (op:_)       = throwError ("Unknown option " ++ op)

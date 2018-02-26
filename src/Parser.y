@@ -176,13 +176,13 @@ parseError t = do
                 Position a r c <- getPosition
                 rawError ("Parser Error (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ show t)
 
-parse :: String -> Either Error (E.Expr Position)
+parse :: String -> Either FrontEndError (E.Expr Position)
 parse s = runParser s slangParse
 
-parser :: String -> Except Error (E.Expr Position)
+parser :: String -> Except FrontEndError (E.Expr Position)
 parser = parserT
 
-parserT :: Monad m => String -> ExceptT Error m (E.Expr Position)
+parserT :: Monad m => String -> ExceptT FrontEndError m (E.Expr Position)
 parserT = ExceptT . return . parse
 
 }

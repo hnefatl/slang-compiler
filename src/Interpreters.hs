@@ -4,7 +4,9 @@ module Interpreters
     Interpreter,
     Result(..),
     ResultConvertible,
-    convert,
+    convertResult,
+    convertInterpreterError,
+    convertInterpreterResult,
     runInterpreter,
     execInterpreter
 ) where
@@ -12,15 +14,14 @@ module Interpreters
 import qualified Interpreters.Ast as A
 
 import Common
-import Lexer (Position)
 import Parser (parse)
 import TypeChecker (typecheck)
 
 type Program = String
-type Interpreter v = A.Ast Position -> IO (Either Error v)
+type Interpreter e v = A.Ast Position -> IO (Either e v)
 
 class ResultConvertible a where
-    convert :: a -> Maybe Result
+    convertResult :: a -> Maybe Result
 
 data Result = Unit
             | Integer Integer
@@ -31,7 +32,7 @@ data Result = Unit
             deriving Eq
 
 instance ResultConvertible Result where
-    convert = Just . id
+    convertResult = Just . id
 
 instance Show Result where
     show Unit = "()"
@@ -41,7 +42,26 @@ instance Show Result where
     show (Inl v) = "inl " ++ show v
     show (Inr v) = "inr " ++ show v
 
-runInterpreter :: (Show a, ResultConvertible a) => Interpreter a -> Program -> IO (Either Error Result)
+-- Modify an interpreter to produce a front-end error rather than an internal one
+convertInterpreterError :: ErrorConvertible e => Interpreter e v -> Interpreter FrontEndError v
+convertInterpreterError i ast = do
+                result <- i ast
+                case result of
+                    Left e  -> return $ Left (convertError e)
+                    Right v -> return $ Right v
+
+-- Modify an interpreter to produce a standard result rather than an internal value
+convertInterpreterResult :: (Show v, ResultConvertible v) => Interpreter FrontEndError v -> Interpreter FrontEndError Result
+convertInterpreterResult i ast = do
+        output <- i ast
+        case output of
+            Left e  -> return $ Left e
+            Right v -> case convertResult v of
+                        Nothing -> return $ Left ("Invalid result from program: " ++ show v)
+                        Just r  -> return $ Right r
+
+-- Run an interpreter on a program, produce an error or a result
+runInterpreter :: (Show a, ResultConvertible a) => Interpreter FrontEndError a -> Program -> IO (Either FrontEndError Result)
 runInterpreter interpreter program = do
             let val = do -- Either monad
                     parsed <- parse program
@@ -50,18 +70,15 @@ runInterpreter interpreter program = do
             case val of
                 Left e -> return $ Left e
                 Right parsed -> do -- IO monad
-                    output <- interpreter (A.translate parsed)
-                    case output of
-                        Left err     -> return $ Left err
-                        Right value -> case convert value of
-                                Nothing     -> return $ Left ("Invalid result from program: " ++ show value)
-                                Just result -> return $ Right result
+                    output <- (convertInterpreterResult interpreter) (A.translate parsed)
+                    return output
 
-execInterpreter :: (Show a, ResultConvertible a) => Interpreter a -> Program -> IO ()
+-- Fully front-end, run an interpreter and print the output
+execInterpreter :: (Show a, ResultConvertible a) => Interpreter FrontEndError a -> Program -> IO ()
 execInterpreter interpreter program = do
             output <- runInterpreter interpreter program
             case output of
                 Left e  -> putStrLn e
-                Right v -> case convert v of
+                Right v -> case convertResult v of
                         Nothing -> putStrLn ("Output of program wasn't a valid Result: " ++ show v)
                         Just x  -> print x

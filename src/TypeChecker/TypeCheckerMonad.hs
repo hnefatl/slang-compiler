@@ -13,22 +13,27 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Map.Lazy as M
 
+import Common
+import TypeChecker.Error
+
 type Environment k v = M.Map k v
 
-newtype TypeChecker k v e a = TypeChecker
+newtype TypeChecker k v a = TypeChecker
     {
-        run :: ReaderT (Environment k v) (Except e) a
+        run :: ReaderT (Environment k v) (Except Error) a
     }
-    deriving (Functor, Applicative, Monad, MonadReader (Environment k v), MonadError e)
+    deriving (Functor, Applicative, Monad, MonadReader (Environment k v), MonadError Error)
 
-inModifiedEnv :: (Environment k v -> Environment k v) -> TypeChecker k v e a -> TypeChecker k v e a
+inModifiedEnv :: (Environment k v -> Environment k v) -> TypeChecker k v a -> TypeChecker k v a
 inModifiedEnv = local
 
-fromEnv :: (Environment k v -> a) -> TypeChecker k v e a
+fromEnv :: (Environment k v -> a) -> TypeChecker k v a
 fromEnv = asks
 
-typeError :: e -> TypeChecker k v e a
+typeError :: Error -> TypeChecker k v a
 typeError = throwError
 
-runTypeChecker :: TypeChecker k v e a -> Either e a
-runTypeChecker t = runExcept $ runReaderT (run t) M.empty
+runTypeChecker :: TypeChecker k v a -> Either FrontEndError a
+runTypeChecker t = case runExcept $ runReaderT (run t) M.empty of
+                    Left e  -> Left $ convertError e -- Convert the error from internal to external
+                    Right r -> Right r

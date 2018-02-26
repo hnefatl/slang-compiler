@@ -34,10 +34,10 @@ type TestResult = String
 type TestInfo = (FilePath, Program, TestResult)
 
 type InterpreterName = String
-type InterpreterInfo v = (InterpreterName, Interpreter v)
+type InterpreterInfo v = (InterpreterName, Interpreter FrontEndError v)
 
 -- Interpret a program, return Nothing if it ran correctly and otherwise return Just the error
-testInterpret :: Interpreter Result -> Program -> TestResult -> IO (Either Error Result)
+testInterpret :: Interpreter FrontEndError Result -> Program -> TestResult -> IO (Either FrontEndError Result)
 testInterpret interpreter program result = do
                 res <- runInterpreter interpreter program
                 case res of

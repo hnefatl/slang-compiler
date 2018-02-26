@@ -13,9 +13,9 @@ import System.IO (hFlush, stdout)
 import System.Random (randomIO)
 
 import Common
-import Lexer (Position)
+import Interpreters.Error
 import qualified Interpreters.Ast as A
-import qualified Interpreters as I (Result(..), ResultConvertible, convert)
+import qualified Interpreters as I (Result(..), ResultConvertible, Interpreter, convertResult)
 import Interpreters.Interpreter0Monad
 
 data Value = Unit
@@ -29,28 +29,28 @@ data Value = Unit
            deriving (Eq, Show)
 
 instance I.ResultConvertible Value where
-    convert Unit        = Just $ I.Unit
-    convert (Integer i) = Just $ I.Integer i
-    convert (Boolean b) = Just $ I.Boolean b
-    convert (Ref _)     = Nothing
-    convert (Pair l r)  = liftM2 I.Pair (I.convert l) (I.convert r)
-    convert (Inl v)     = liftM I.Inl (I.convert v)
-    convert (Inr v)     = liftM I.Inr (I.convert v)
-    convert (Fun _ _)   = Nothing
+    convertResult Unit        = Just $ I.Unit
+    convertResult (Integer i) = Just $ I.Integer i
+    convertResult (Boolean b) = Just $ I.Boolean b
+    convertResult (Ref _)     = Nothing
+    convertResult (Pair l r)  = liftM2 I.Pair (I.convertResult l) (I.convertResult r)
+    convertResult (Inl v)     = liftM I.Inl (I.convertResult v)
+    convertResult (Inr v)     = liftM I.Inr (I.convertResult v)
+    convertResult (Fun _ _)   = Nothing
 
-type SlangInterpreter0 a = Interpreter0 A.Variable Value Error a
+type SlangInterpreter0 a = Interpreter0 A.Variable Value a
 
-interpret :: A.Ast Position -> IO (Either Error Value)
+interpret :: I.Interpreter Error Value
 interpret = runInterpreter0Monad . interpret'
 
 interpret' :: A.Ast Position -> SlangInterpreter0 Value
 interpret' (A.Unit _)              = return Unit
 interpret' (A.Integer _ i)         = return $ Integer i
 interpret' (A.Boolean _ b)         = return $ Boolean b
-interpret' (A.Variable _ v)        = getValue' v
-interpret' (A.Deref _ e)           = do
+interpret' (A.Variable pos v)      = getValue' pos v
+interpret' (A.Deref pos e)         = do
                                         Ref inner <- interpret' e
-                                        getValue' inner
+                                        getValue' pos inner
 interpret' (A.Ref _ e)             = do
                                         inner <- interpret' e
                                         makeRef inner
@@ -58,13 +58,13 @@ interpret' (A.Pair _ l r)          = do
                                         lv <- (interpret' l)
                                         rv <- (interpret' r)
                                         return $ Pair lv rv
-interpret' (A.UnaryOp _ op e)      = do
+interpret' (A.UnaryOp pos op e)    = do
                                         val <- (interpret' e)
-                                        interpretUOp op val
-interpret' (A.BinaryOp _ op l r)   = do
+                                        interpretUOp pos op val
+interpret' (A.BinaryOp pos op l r) = do
                                         lv <- (interpret' l)
                                         rv <- (interpret' r)
-                                        interpretBOp op lv rv
+                                        interpretBOp pos op lv rv
 interpret' (A.Sequence _ es)       = do
                                         exprs <- mapM interpret' es
                                         return (last exprs)
@@ -78,16 +78,16 @@ interpret' (A.Inl _ e)             = do
 interpret' (A.Inr _ e)             = do
                                         v <- interpret' e
                                         return (Inr v)
-interpret' (A.Case _ e l r)        = do
+interpret' (A.Case pos e l r)      = do
                                         ev <- interpret' e
                                         case ev of
                                             Inl v -> do
                                                     lf <- interpret' l
-                                                    apply lf v
+                                                    apply pos lf v
                                             Inr v -> do
                                                     rf <- interpret' r
-                                                    apply rf v
-                                            _     -> runtimeError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
+                                                    apply pos rf v
+                                            _     -> runtimeError (Error pos $ FATAL_InlInrMismatch e)
 interpret' (A.Fst _ e)             = do
                                         Pair l _ <- interpret' e
                                         return l
@@ -108,48 +108,51 @@ interpret' (A.LetFun _ n f e)      = do
                                         fv <- interpret' f
                                         local n fv (interpret' e) 
 interpret' (A.Fun _ x e)           = return $ Fun x e
-interpret' (A.Application _ e1 e2) = do
+interpret' (A.Application pos e1 e2) = do
                                         -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
                                         x <- interpret' e2
                                         f <- interpret' e1
-                                        apply f x
+                                        apply pos f x
 interpret' (A.Input _)               = do
                                         liftIO (putStr "Input> ")
                                         liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
                                         v <- liftIO readLn
                                         return (Integer v)
 
-interpretUOp :: A.UOp -> Value -> SlangInterpreter0 Value
-interpretUOp A.Neg (Integer i) = return $ Integer (-i)
-interpretUOp A.Not (Boolean b) = return $ Boolean (not b)
-interpretUOp op v = runtimeError ("Compiler Error: " ++ show op ++ " on " ++ show v)
+interpretUOp :: Position -> A.UOp -> Value -> SlangInterpreter0 Value
+interpretUOp _ A.Neg (Integer i) = return $ Integer (-i)
+interpretUOp _ A.Not (Boolean b) = return $ Boolean (not b)
+interpretUOp pos op _ = runtimeError (Error pos $ FATAL_InvalidUOpArguments op)
 
-interpretBOp :: A.BOp -> Value -> Value -> SlangInterpreter0 Value
-interpretBOp A.Add (Integer l) (Integer r) = return $ Integer (l + r)
-interpretBOp A.Sub (Integer l) (Integer r) = return $ Integer (l - r)
-interpretBOp A.Mul (Integer l) (Integer r) = return $ Integer (l * r)
-interpretBOp A.Div (Integer _) (Integer 0) = runtimeError "Division by zero"
-interpretBOp A.Div (Integer l) (Integer r) = return $ Integer (l `div` r)
-interpretBOp A.And (Boolean l) (Boolean r) = return $ Boolean (l && r)
-interpretBOp A.Or (Boolean l) (Boolean r) = return $ Boolean (l || r)
-interpretBOp A.Equal l r = return $ Boolean (l == r)
-interpretBOp A.Less (Integer l) (Integer r) = return $ Boolean (l < r)
-interpretBOp A.Assign (Ref l) v = do setValue l v
-                                     return Unit
-interpretBOp op l r = runtimeError ("Compiler Error: " ++ show op ++ " on " ++ show l ++ " and " ++ show r)
+interpretBOp :: Position -> A.BOp -> Value -> Value -> SlangInterpreter0 Value
+interpretBOp _   A.Add (Integer l) (Integer r) = return $ Integer (l + r)
+interpretBOp _   A.Sub (Integer l) (Integer r) = return $ Integer (l - r)
+interpretBOp _   A.Mul (Integer l) (Integer r) = return $ Integer (l * r)
+interpretBOp pos A.Div (Integer _) (Integer 0) = runtimeError (Error pos DivisionByZero)
+interpretBOp _   A.Div (Integer l) (Integer r) = return $ Integer (l `div` r)
+interpretBOp _   A.And (Boolean l) (Boolean r) = return $ Boolean (l && r)
+interpretBOp _   A.Or (Boolean l) (Boolean r) = return $ Boolean (l || r)
+interpretBOp _   A.Equal l r = return $ Boolean (l == r)
+interpretBOp _   A.Less (Integer l) (Integer r) = return $ Boolean (l < r)
+interpretBOp _   A.Assign (Ref l) v = do setValue l v
+                                         return Unit
+interpretBOp pos op _ _ = runtimeError (Error pos $ FATAL_InvalidBOpArguments op)
+------------------------------------------
+---------------- format ------------------
+------------------------------------------
 
 -- A version of Interpreter0.getValue that has a standard error message
-getValue' :: A.Variable -> SlangInterpreter0 Value
-getValue' k = getValueE k ("Couldn't find variable with name " ++ show k ++ " in environment")
+getValue' :: Position -> A.Variable -> SlangInterpreter0 Value
+getValue' pos k = getValueE k (Error pos $ MissingVariable k)
 
-apply :: Value -> Value -> SlangInterpreter0 Value
-apply (Fun v e) x = do
-                        x' <- valueToAst x
+apply :: Position -> Value -> Value -> SlangInterpreter0 Value
+apply pos (Fun v e) x = do
+                        x' <- valueToAst pos x
                         let e' = updateVariable v x' e
                         local v x (interpret' e')
-apply f x = runtimeError ("Compiler Error: apply shouldn't have been called on " ++ show f ++ " with " ++ show x)
+apply pos _ _ = runtimeError (Error pos FATAL_InvalidApplication)
 
--- This is messy, but I've not found a nicer way to do it - can't use lenses as Ast isn't Traversable
+-- This is messy, but I've not found a nicer way to do it
 updateVariable :: A.Variable -> (Position -> A.Ast Position) -> A.Ast Position -> A.Ast Position
 updateVariable var valUpdater tree = updateVariable' tree
     where
@@ -176,25 +179,28 @@ updateVariable var valUpdater tree = updateVariable' tree
         updateVariable' (A.Fun p v e) = (A.Fun p v) (updateVariable' e)
         updateVariable' (A.Application p e1 e2) = A.Application p (updateVariable' e1) (updateVariable' e2)
 
-valueToAst :: Value -> SlangInterpreter0 (Position -> A.Ast Position)
-valueToAst Unit = return (\p -> A.Unit p)
-valueToAst (Integer i) = return $ \p -> A.Integer p i
-valueToAst (Boolean b) = return $ \p -> A.Boolean p b
-valueToAst (Ref n) = do
-                        value <- getValueE n "Compiler Error: Value of ref not found"
-                        inner <- valueToAst value
-                        return $ \p -> A.Ref p (inner p)
-valueToAst (Pair l r) = do
-                            lt <- valueToAst l
-                            rt <- valueToAst r
-                            return $ \p -> A.Pair p (lt p) (rt p)
-valueToAst (Inl l) = do
-                        inner <- valueToAst l
-                        return $ \p -> A.Inl p (inner p)
-valueToAst (Inr r) = do
-                        inner <- valueToAst r
-                        return $ \p -> A.Inr p (inner p)
-valueToAst (Fun x e) = return $ \p -> A.Fun p x e
+-- We return a function from Position -> Ast so that the value we construct can be slotted into the converted
+-- AST generated by updateVariable and point to the right place
+-- The position argument to this function is in case an error occurs during the value -> ast partial conversion
+valueToAst :: Position -> Value -> SlangInterpreter0 (Position -> A.Ast Position)
+valueToAst _    Unit       = return (\p -> A.Unit p)
+valueToAst _   (Integer i) = return $ \p -> A.Integer p i
+valueToAst _   (Boolean b) = return $ \p -> A.Boolean p b
+valueToAst _   (Fun x e)   = return $ \p -> A.Fun p x e
+valueToAst pos (Ref n)     = do
+                                value <- getValueE n (Error pos FATAL_RefMissing)
+                                inner <- valueToAst pos value
+                                return $ \p -> A.Ref p (inner p)
+valueToAst pos (Pair l r)  = do
+                                lt <- valueToAst pos l
+                                rt <- valueToAst pos r
+                                return $ \p -> A.Pair p (lt p) (rt p)
+valueToAst pos (Inl l)     = do
+                                inner <- valueToAst pos l
+                                return $ \p -> A.Inl p (inner p)
+valueToAst pos (Inr r)     = do
+                                inner <- valueToAst pos r
+                                return $ \p -> A.Inr p (inner p)
 
 
 makeRef :: Value -> SlangInterpreter0 Value

@@ -7,7 +7,6 @@ module Lexer
 (
     reservedTokens,
     Parser,
-    Position(..),
     getPosition,
     runParser,
     parserEOF,
@@ -128,14 +127,6 @@ type Parser a = Alex a
 type ParserState = AlexState
 type ParserInput = AlexInput
 
-data Position = Position
-    {
-        absCharPos  :: Int, -- Absolute character position in the file
-        row         :: Int, -- Line number
-        col         :: Int  -- Column number
-    }
-    deriving (Eq, Show)
-
 getPosition :: Parser Position
 getPosition = do
                 (AlexPn a l c, _, _, _) <- alexGetInput
@@ -146,13 +137,13 @@ getToken = do
             (_, _, _, input) <- alexGetInput
             return input
 
-runParser :: String -> Parser a -> Either Error a
+runParser :: String -> Parser a -> Either FrontEndError a
 runParser = runAlex
 
-rawError :: Error -> Parser a
+rawError :: FrontEndError -> Parser a
 rawError = alexError
 
-lexError :: Error -> Parser a
+lexError :: FrontEndError -> Parser a
 lexError err = do
             Position a r c <- getPosition
             input <- getToken
@@ -174,6 +165,6 @@ capitalise :: String -> String
 capitalise "" = ""
 capitalise (c:cl) = [toUpper c] ++ map toLower cl
 
-tokenise :: String -> Either Error T.Token
+tokenise :: String -> Either FrontEndError T.Token
 tokenise s = runParser s alexMonadScan
 }

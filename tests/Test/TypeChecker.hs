@@ -7,10 +7,11 @@ import Test.Tasty.QuickCheck
 import Test.Util
 
 import TypeChecker
+import Common
 import Parser
 import Parser.Types
 
-typecheck' :: String -> Either Error Type
+typecheck' :: String -> Either FrontEndError Type
 typecheck' s = parse s >>= typecheck
 
 testCase' :: String -> Type -> TestTree
