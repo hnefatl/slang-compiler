@@ -14,70 +14,70 @@ import Common
 }
 
 %name slangParse
-%tokentype { Token }
+%tokentype { L.Token }
 %error { parseError }
-%monad { Alex }
-%lexer { lexerWrapper } { (L.EOF, _) }
+%monad { Parser }
+%lexer { lexer } { L.EOF }
 
 %token
-    '('         { (L.LParen, _) }
-    ')'         { (L.RParen, _) }
-    ','         { (L.Comma, _) }
-    ':'         { (L.Colon, _) }
-    ';'         { (L.Semicolon, _) }
+    '('         { L.LParen }
+    ')'         { L.RParen }
+    ','         { L.Comma }
+    ':'         { L.Colon }
+    ';'         { L.Semicolon }
 
-    '+'         { (L.Add, _) }
-    '-'         { (L.Sub, _) }
-    '*'         { (L.Mult, _) }
-    '/'         { (L.Div, _) }
+    '+'         { L.Add }
+    '-'         { L.Sub }
+    '*'         { L.Mult }
+    '/'         { L.Div }
 
-    '='         { (L.Equal, _) }
-    '<'         { (L.Less, _) }
-    '~'         { (L.Not, _) }
-    '&&'        { (L.And, _) }
-    '||'        { (L.Or, _) }
+    '='         { L.Equal }
+    '<'         { L.Less }
+    '~'         { L.Not }
+    '&&'        { L.And }
+    '||'        { L.Or }
 
-    '|'         { (L.Pipe, _) }
-    '->'        { (L.Arrow, _) }
+    '|'         { L.Pipe }
+    '->'        { L.Arrow }
 
-    ref         { (L.Ref, _) }
-    ':='        { (L.Assign, _) }
-    '!'         { (L.Deref, _) }
+    ref         { L.Ref }
+    ':='        { L.Assign }
+    '!'         { L.Deref }
 
-    inl         { (L.Inl, _) }
-    inr         { (L.Inr, _) }
-    case        { (L.Case, _) }
-    of          { (L.Of, _) }
+    inl         { L.Inl }
+    inr         { L.Inr }
+    case        { L.Case }
+    of          { L.Of }
 
-    fst         { (L.Fst, _) }
-    snd         { (L.Snd, _) }
+    fst         { L.Fst }
+    snd         { L.Snd }
 
-    if          { (L.If, _) }
-    then        { (L.Then, _) }
-    else        { (L.Else, _) }
+    if          { L.If }
+    then        { L.Then }
+    else        { L.Else }
 
-    let         { (L.Let, _) }
-    in          { (L.In, _) }
+    let         { L.Let }
+    in          { L.In }
 
-    fun         { (L.Fun, _) }
+    fun         { L.Fun }
 
-    begin       { (L.Begin, _) }
-    end         { (L.End, _) }
+    begin       { L.Begin }
+    end         { L.End }
 
-    while       { (L.While, _) }
-    do          { (L.Do, _) }
+    while       { L.While }
+    do          { L.Do }
 
-    unit        { (L.Unit, _) }
-    integer     { (L.Integer $$, _) }
-    boolean     { (L.Boolean $$, _) }
+    unit        { L.Unit }
+    integer     { L.Integer $$ }
+    boolean     { L.Boolean $$ }
 
-    identifier  { (L.Identifier $$, _) }
+    identifier  { L.Identifier $$ }
 
-    input       { (L.Input, _) }
+    input       { L.Input }
 
-    inttype     { (L.IntType, _) }
-    booltype    { (L.BoolType, _) }
-    unittype    { (L.UnitType, _) }
+    inttype     { L.IntType }
+    booltype    { L.BoolType }
+    unittype    { L.UnitType }
 
 
 -- Lowest precedence
@@ -162,14 +162,10 @@ Type    : inttype           { T.Integer }
 
 
 {
-parseError :: Token -> Alex a
-parseError t = alexError $ "Parse Error: " ++ show t
-    
-lexerWrapper :: (Token -> Alex a) -> Alex a
-lexerWrapper f = do
-        token <- alexMonadScan
-        f token
-    
+
+parseError :: L.Token -> Parser a
+parseError t = rawError $ "Parse Error: " ++ show t
+
 parse :: String -> Either Error E.Expr
-parse s = runAlex s slangParse
+parse s = runParser s slangParse
 }

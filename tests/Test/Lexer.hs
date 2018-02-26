@@ -9,13 +9,13 @@ import Lexer.Tokens
 
 import Test.Util
 
-tokenise' :: String -> Maybe TokenClass
-tokenise' = either (const Nothing) (Just . fst) . tokenise
+tokenise' :: String -> Maybe Token
+tokenise' = either (const Nothing) Just . tokenise
 
-testCase' :: String -> TokenClass -> TestTree
+testCase' :: String -> Token -> TestTree
 testCase' s e = testCase s (tokenise' s @?= Just e)
 
-testCaseInvert' :: String -> TokenClass -> TestTree
+testCaseInvert' :: String -> Token -> TestTree
 testCaseInvert' s e = testCase s (tokenise' s ~?= Just e)
 
 lexerTests :: TestTree

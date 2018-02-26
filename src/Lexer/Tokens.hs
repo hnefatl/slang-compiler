@@ -1,65 +1,64 @@
 module Lexer.Tokens
 (
-    TokenClass(..)
+    Token(..)
 ) where
 
-data TokenClass = LParen
-                | RParen
-                | Comma
-                | Colon
-                | Semicolon
+data Token = LParen
+           | RParen
+           | Comma
+           | Colon
+           | Semicolon
 
-                | Add
-                | Sub
-                | Mult
-                | Div
+           | Add
+           | Sub
+           | Mult
+           | Div
 
-                | Equal
-                | Less
-                | Not
-                | And
-                | Or
-            
-                | Pipe
-                | Arrow
+           | Equal
+           | Less
+           | Not
+           | And
+           | Or
+           | Pipe
+           | Arrow
 
-                | Ref
-                | Assign
-                | Deref
+           | Ref
+           | Assign
+           | Deref
 
-                | Inl
-                | Inr
-                | Case
-                | Of
+           | Inl
+           | Inr
+           | Case
+           | Of
 
-                | Fst
-                | Snd
+           | Fst
+           | Snd
 
-                | If
-                | Then
-                | Else
+           | If
+           | Then
+           | Else
 
-                | Let
-                | In
+           | Let
+           | In
 
-                | Fun
+           | Fun
 
-                | Begin
-                | End
+           | Begin
+           | End
 
-                | While
-                | Do
+           | While
+           | Do
 
-                | Unit
-                | Integer Integer
-                | Boolean Bool
+           | Unit
+           | Integer Integer
+           | Boolean Bool
 
-                | Input
-                | Identifier String
+           | Input
+           | Identifier String
 
-                | IntType
-                | BoolType
-                | UnitType
+           | IntType
+           | BoolType
+           | UnitType
 
-                | EOF
-                deriving (Eq, Show)
+           | EOF
+           deriving (Eq, Show)
