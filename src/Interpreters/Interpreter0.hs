@@ -44,80 +44,80 @@ interpret :: A.Ast Position -> IO (Either Error Value)
 interpret = runInterpreter0Monad . interpret'
 
 interpret' :: A.Ast Position -> SlangInterpreter0 Value
-interpret' (A.Unit _)               = return Unit
+interpret' (A.Unit _)              = return Unit
 interpret' (A.Integer _ i)         = return $ Integer i
 interpret' (A.Boolean _ b)         = return $ Boolean b
 interpret' (A.Variable _ v)        = getValue' v
 interpret' (A.Deref _ e)           = do
-                                    Ref inner <- interpret' e
-                                    getValue' inner
+                                        Ref inner <- interpret' e
+                                        getValue' inner
 interpret' (A.Ref _ e)             = do
-                                    inner <- interpret' e
-                                    makeRef inner
+                                        inner <- interpret' e
+                                        makeRef inner
 interpret' (A.Pair _ l r)          = do
-                                    lv <- (interpret' l)
-                                    rv <- (interpret' r)
-                                    return $ Pair lv rv
+                                        lv <- (interpret' l)
+                                        rv <- (interpret' r)
+                                        return $ Pair lv rv
 interpret' (A.UnaryOp _ op e)      = do
-                                    val <- (interpret' e)
-                                    interpretUOp op val
+                                        val <- (interpret' e)
+                                        interpretUOp op val
 interpret' (A.BinaryOp _ op l r)   = do
-                                    lv <- (interpret' l)
-                                    rv <- (interpret' r)
-                                    interpretBOp op lv rv
+                                        lv <- (interpret' l)
+                                        rv <- (interpret' r)
+                                        interpretBOp op lv rv
 interpret' (A.Sequence _ es)       = do
-                                    exprs <- mapM interpret' es
-                                    return (last exprs)
+                                        exprs <- mapM interpret' es
+                                        return (last exprs)
 interpret' (A.If _ c l r)          = do
-                                    Boolean b <- interpret' c
-                                    if b then interpret' l
-                                    else interpret' r
+                                        Boolean b <- interpret' c
+                                        if b then interpret' l
+                                        else interpret' r
 interpret' (A.Inl _ e)             = do
-                                    v <- interpret' e
-                                    return (Inl v)
+                                        v <- interpret' e
+                                        return (Inl v)
 interpret' (A.Inr _ e)             = do
-                                    v <- interpret' e
-                                    return (Inr v)
+                                        v <- interpret' e
+                                        return (Inr v)
 interpret' (A.Case _ e l r)        = do
-                                    ev <- interpret' e
-                                    case ev of
-                                        Inl v   -> do
+                                        ev <- interpret' e
+                                        case ev of
+                                            Inl v -> do
                                                     lf <- interpret' l
                                                     apply lf v
-                                        Inr v   -> do
+                                            Inr v -> do
                                                     rf <- interpret' r
                                                     apply rf v
-                                        _       -> runtimeError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
+                                            _     -> runtimeError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
 interpret' (A.Fst _ e)             = do
-                                    Pair l _ <- interpret' e
-                                    return l
+                                        Pair l _ <- interpret' e
+                                        return l
 interpret' (A.Snd _ e)             = do
-                                    Pair _ r <- interpret' e
-                                    return r
+                                        Pair _ r <- interpret' e
+                                        return r
 interpret' orig@(A.While _ c e)    = do
-                                    Boolean cond <- interpret' c
-                                    if cond then do
-                                        interpret' e
-                                        interpret' orig
-                                    else
-                                        return Unit
+                                        Boolean cond <- interpret' c
+                                        if cond then do
+                                            interpret' e
+                                            interpret' orig
+                                        else
+                                            return Unit
 interpret' (A.Let _ n e1 e2)       = do
-                                    v <- interpret' e1
-                                    local n v (interpret' e2)
+                                        v <- interpret' e1
+                                        local n v (interpret' e2)
 interpret' (A.LetFun _ n f e)      = do
-                                    fv <- interpret' f
-                                    local n fv (interpret' e) 
+                                        fv <- interpret' f
+                                        local n fv (interpret' e) 
 interpret' (A.Fun _ x e)           = return $ Fun x e
 interpret' (A.Application _ e1 e2) = do
-                                    -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
-                                    x <- interpret' e2
-                                    f <- interpret' e1
-                                    apply f x
+                                        -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
+                                        x <- interpret' e2
+                                        f <- interpret' e1
+                                        apply f x
 interpret' (A.Input _)               = do
-                                    liftIO (putStr "Input> ")
-                                    liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
-                                    v <- liftIO readLn
-                                    return (Integer v)
+                                        liftIO (putStr "Input> ")
+                                        liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
+                                        v <- liftIO readLn
+                                        return (Integer v)
 
 interpretUOp :: A.UOp -> Value -> SlangInterpreter0 Value
 interpretUOp A.Neg (Integer i) = return $ Integer (-i)
