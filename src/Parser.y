@@ -164,7 +164,9 @@ Type    : inttype           { T.Integer }
 {
 
 parseError :: L.Token -> Parser a
-parseError t = rawError $ "Parse Error: " ++ show t
+parseError t = do
+                Position a r c <- getPosition
+                rawError ("Parser Error (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ show t)
 
 parse :: String -> Either Error E.Expr
 parse s = runParser s slangParse

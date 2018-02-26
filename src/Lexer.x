@@ -7,6 +7,8 @@ module Lexer
 (
     reservedTokens,
     Parser,
+    Position(..),
+    getPosition,
     runParser,
     parserEOF,
     rawError,
@@ -104,8 +106,14 @@ tokens :-
 reservedTokens :: [String]
 reservedTokens = ["ref", "inl", "inr", "case", "of", "fst", "snd", "if", "then", "else", "let", "in", "fun", "begin", "end", "while", "do", "int", "bool", "unit"]
 
+-- Helper function for the Alex stuff that Alex itself doesn't expose
+-- Don't think this is necessary, we can get position from alexGetInput
+--getAlexState :: Alex AlexState
+--getAlexState = Alex $ \s -> Right (s, s)
+
 -- Defined our own parser types and functions that just alias through to the underlying "Alex" type
--- that's fixed and used by the lexer
+-- that's fixed and used by the lexer.
+-- From here on we use Parser instead of Alex wherever possible (and outside the module we only see Parser)
 type Parser a = Alex a
 type ParserState = AlexState
 type ParserInput = AlexInput
@@ -117,8 +125,15 @@ data Position = Position
         col         :: Int  -- Column number
     }
 
-getPosition :: ParserState -> Position
-getPosition AlexState { alex_pos = AlexPn a l c } = Position a l c
+getPosition :: Parser Position
+getPosition = do
+                (AlexPn a l c, _, _, _) <- alexGetInput
+                return (Position a l c)
+
+getToken :: Parser String
+getToken = do
+            (_, _, _, input) <- alexGetInput
+            return input
 
 runParser :: String -> Parser a -> Either Error a
 runParser = runAlex
@@ -127,7 +142,10 @@ rawError :: Error -> Parser a
 rawError = alexError
 
 lexError :: Error -> Parser a
-lexError err = rawError $ "Lex Error: " ++ err
+lexError err = do
+            Position a r c <- getPosition
+            input <- getToken
+            rawError ("Lex Error on " ++ input ++ " (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ err)
 
 lexer :: (T.Token -> Parser a) -> Parser a
 lexer f = alexMonadScan >>= f
