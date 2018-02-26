@@ -1,6 +1,4 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
--- Don't warn us about the missing signatures for all the "stateless*" utility methods
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module Interpreters.Ast
 (
@@ -9,29 +7,7 @@ module Interpreters.Ast
     BOp(..),
     Variable,
     translate,
-    stripState,
-    statelessUnit,
-    statelessInteger,
-    statelessBoolean,
-    statelessVariable,
-    statelessDeref,
-    statelessRef,
-    statelessPair,
-    statelessUnaryOp,
-    statelessBinaryOp,
-    statelessSequence,
-    statelessIf,
-    statelessInl,
-    statelessInr,
-    statelessCase,
-    statelessFst,
-    statelessSnd,
-    statelessWhile,
-    statelessLet,
-    statelessLetFun,
-    statelessFun,
-    statelessApplication,
-    statelessInput
+    stripState
 ) where
 
 import qualified Parser.Expressions as E
@@ -123,27 +99,3 @@ translateBOp E.OpAssign = Assign
 
 stripState :: Ast a -> Ast ()
 stripState = fmap (const ())
-
--- Duplicates of all the Ast constructors but without the state
-statelessUnit = Unit ()
-statelessInteger = Integer ()
-statelessBoolean = Boolean ()
-statelessVariable = Variable ()
-statelessDeref = Deref ()
-statelessRef = Ref ()
-statelessPair = Pair ()
-statelessUnaryOp = UnaryOp ()
-statelessBinaryOp = BinaryOp ()
-statelessSequence = Sequence ()
-statelessIf = If ()
-statelessInl = Inl ()
-statelessInr = Inr ()
-statelessCase = Case ()
-statelessFst = Fst ()
-statelessSnd = Snd ()
-statelessWhile = While ()
-statelessLet = Let ()
-statelessLetFun = LetFun ()
-statelessFun = Fun ()
-statelessApplication = Application ()
-statelessInput = Input ()
