@@ -16,6 +16,7 @@ A list of random thoughts to be implemented.
   - [x] Hook it into the typechecker and interpreters to allow for error messages dependent on location.
 - [x] Error messages - make a typeclass for "error messages" and ADT instances of it for each thing that can have errors. Report errors as an item from the relevant ADT, do the string conversion later.
   - [ ] Add more context to the error messages - allow for passing more relevant information.
+- [ ] Pretty-printing of various internal structures. Would make for readable error messages.
 - [ ] Differentiate between arbitrary precision integers and fixed precision.
   - [ ] Make changes to low-level stack structure as necessary.
 - [ ] Add optional nicer syntax - eg. remove the "end" from "while" loops.
