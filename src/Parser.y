@@ -1,7 +1,9 @@
 {
 module Parser
 (
-    parse
+    parse,
+    parser,
+    parserT
 ) where
 
 import Lexer
@@ -9,6 +11,8 @@ import qualified Lexer.Tokens as L
 
 import qualified Parser.Types as T
 import qualified Parser.Expressions as E
+
+import Control.Monad.Except
 
 import Common
 }
@@ -170,4 +174,11 @@ parseError t = do
 
 parse :: String -> Either Error E.Expr
 parse s = runParser s slangParse
+
+parser :: String -> Except Error E.Expr
+parser = parserT
+
+parserT :: Monad m => String -> ExceptT Error m E.Expr
+parserT = ExceptT . return . parse
+
 }

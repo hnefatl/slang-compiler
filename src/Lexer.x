@@ -103,6 +103,16 @@ tokens :-
     @identifier         { makeToken T.Identifier }
     
 {
+
+-- Construct a token in the Parser monad (defined below) given a function to convert an input to a token
+makeToken :: (String -> T.Token) -> ParserInput -> Int -> Parser T.Token
+makeToken f (_, _, _, s) len = return $ f $ take len s
+
+-- Construct a token in the Alex monad given a constant token
+makeConstToken :: T.Token -> ParserInput -> Int -> Parser T.Token
+makeConstToken t = makeToken (const t)
+
+
 reservedTokens :: [String]
 reservedTokens = ["ref", "inl", "inr", "case", "of", "fst", "snd", "if", "then", "else", "let", "in", "fun", "begin", "end", "while", "do", "int", "bool", "unit"]
 
@@ -157,14 +167,6 @@ parserEOF = return T.EOF
 alexEOF :: Parser T.Token
 alexEOF = parserEOF
 
-
--- Construct a token in the Parser monad given a function to convert an input to a token
-makeToken :: (String -> T.Token) -> ParserInput -> Int -> Parser T.Token
-makeToken f (_, _, _, s) len = return $ f $ take len s
-
--- Construct a token in the Alex monad given a constant token
-makeConstToken :: T.Token -> ParserInput -> Int -> Parser T.Token
-makeConstToken t = makeToken (const t)
 
 
 capitalise :: String -> String
