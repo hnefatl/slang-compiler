@@ -125,21 +125,17 @@ interpretUOp _ A.Not (Boolean b) = return $ Boolean (not b)
 interpretUOp pos op _ = runtimeError (Error pos $ FATAL_InvalidUOpArguments op)
 
 interpretBOp :: Position -> A.BOp -> Value -> Value -> SlangInterpreter0 Value
-interpretBOp _   A.Add (Integer l) (Integer r) = return $ Integer (l + r)
-interpretBOp _   A.Sub (Integer l) (Integer r) = return $ Integer (l - r)
-interpretBOp _   A.Mul (Integer l) (Integer r) = return $ Integer (l * r)
-interpretBOp pos A.Div (Integer _) (Integer 0) = runtimeError (Error pos DivisionByZero)
-interpretBOp _   A.Div (Integer l) (Integer r) = return $ Integer (l `div` r)
-interpretBOp _   A.And (Boolean l) (Boolean r) = return $ Boolean (l && r)
-interpretBOp _   A.Or (Boolean l) (Boolean r) = return $ Boolean (l || r)
-interpretBOp _   A.Equal l r = return $ Boolean (l == r)
+interpretBOp _   A.Add (Integer l) (Integer r)  = return $ Integer (l + r)
+interpretBOp _   A.Sub (Integer l) (Integer r)  = return $ Integer (l - r)
+interpretBOp _   A.Mul (Integer l) (Integer r)  = return $ Integer (l * r)
+interpretBOp pos A.Div (Integer l) (Integer 0)  = runtimeError (Error pos $ DivisionByZero l)
+interpretBOp _   A.Div (Integer l) (Integer r)  = return $ Integer (l `div` r)
+interpretBOp _   A.And (Boolean l) (Boolean r)  = return $ Boolean (l && r)
+interpretBOp _   A.Or  (Boolean l) (Boolean r)  = return $ Boolean (l || r)
+interpretBOp _   A.Equal l r                    = return $ Boolean (l == r)
 interpretBOp _   A.Less (Integer l) (Integer r) = return $ Boolean (l < r)
-interpretBOp _   A.Assign (Ref l) v = do setValue l v
-                                         return Unit
+interpretBOp _   A.Assign (Ref n) v = setValue n v >> return Unit
 interpretBOp pos op _ _ = runtimeError (Error pos $ FATAL_InvalidBOpArguments op)
-------------------------------------------
----------------- format ------------------
-------------------------------------------
 
 -- A version of Interpreter0.getValue that has a standard error message
 getValue' :: Position -> A.Variable -> SlangInterpreter0 Value

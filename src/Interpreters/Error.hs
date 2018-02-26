@@ -14,7 +14,7 @@ instance ErrorConvertible Error where
     convertError (Error (Position a r c) err) = 
         "Runtime Error at (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ show err
 
-data ErrorType = DivisionByZero
+data ErrorType = DivisionByZero Integer
                | MissingVariable A.Variable
                | FATAL_InlInrMismatch (A.Ast Position)
                | FATAL_InvalidUOpArguments A.UOp
@@ -23,9 +23,9 @@ data ErrorType = DivisionByZero
                | FATAL_RefMissing
 
 instance Show ErrorType where
-    show DivisionByZero = "Division by zero"
+    show (DivisionByZero i) = "Division by zero: " ++ show i ++ "/0"
     show (MissingVariable name) = "Variable not defined: " ++ show name
-    show (FATAL_InlInrMismatch expr) = "TYPECHECKER BUG: Should be Inl or Inr: " ++ show expr
+    show (FATAL_InlInrMismatch expr) = "TYPECHECKER BUG: Should be Inl or Inr:\n" ++ show expr
     show (FATAL_InvalidUOpArguments op) = "TYPECHECKER BUG: Invalid arguments to unary operator: " ++ show op
     show (FATAL_InvalidBOpArguments op) = "TYPECHECKER BUG: Invalid arguments to binary operator: " ++ show op
     show FATAL_InvalidApplication = "TYPECHECKER BUG: Invalid application"
