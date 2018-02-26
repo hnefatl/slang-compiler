@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+
 module Parser.Expressions
 (
     UOp(..),
@@ -6,10 +8,12 @@ module Parser.Expressions
     BOp(..),
     Variable,
     SimpleExpr(..),
-    Expr(..)
+    Expr(..),
+    stripExprState,
+    stripSimpleExprState
 ) where
 
-import Parser.Types
+import Parser.Types (Type)
 
 data UOp = OpNot | OpNeg deriving (Eq, Show)
 data ArithBOp = OpAdd | OpSub | OpMul | OpDiv deriving (Eq, Show)
@@ -18,41 +22,47 @@ data BOp = OpEqual | OpLess | OpAssign deriving (Eq, Show)
 
 type Variable = String
 
-data SimpleExpr = Unit
-                | Integer Integer
-                | Boolean Bool
-                | Identifier String
-                | Deref SimpleExpr
-                | Ref SimpleExpr
-                | Pair Expr Expr
-                | Expr Expr
-                deriving (Eq, Show)
+data SimpleExpr a = Unit a
+                  | Integer a Integer
+                  | Boolean a Bool
+                  | Identifier a String
+                  | Deref a (SimpleExpr a)
+                  | Ref a (SimpleExpr a)
+                  | Pair a (Expr a) (Expr a)
+                  | Expr (Expr a)
+                  deriving (Eq, Show, Functor, Foldable, Traversable)
 
-data Expr   = UnaryOp UOp Expr
-            | ArithBinaryOp ArithBOp Expr Expr
-            | BoolBinaryOp BoolBOp Expr Expr
-            | BinaryOp BOp Expr Expr
+data Expr a = UnaryOp a UOp (Expr a)
+            | ArithBinaryOp a ArithBOp (Expr a) (Expr a)
+            | BoolBinaryOp a BoolBOp (Expr a) (Expr a)
+            | BinaryOp a BOp (Expr a) (Expr a)
 
-            | Sequence [Expr]
+            | Sequence a [Expr a]
 
-            | If Expr Expr Expr
+            | If a (Expr a) (Expr a) (Expr a) 
 
-            | Inl Expr Type  -- inl bool 5
-            | Inr Expr Type  -- inr int true
-            | Case Expr Expr Expr -- case inl bool 5 of (inl x : int) -> true | (inr x : bool) -> x end
+            | Inl a (Expr a) Type  -- inl bool 5
+            | Inr a (Expr a) Type  -- inr int true
+            | Case a (Expr a) (Expr a) (Expr a) -- case inl bool 5 of (inl x : int) -> true | (inr x : bool) -> x end
 
-            | Fst Expr
-            | Snd Expr
+            | Fst a (Expr a)
+            | Snd a (Expr a)
 
-            | While Expr Expr
+            | While a (Expr a) (Expr a)
 
-            | Let Variable Type Expr Expr  -- let (x : int) = 1 in ... end
-            | LetFun Variable Expr Type Expr  -- let f(x : int) : int = x + 1 in ... end. The first Expr is a function.
+            | Let a Variable Type (Expr a) (Expr a)  -- let (x : int) = 1 in ... end
+            | LetFun a Variable (Expr a) Type (Expr a)  -- let f(x : int) : int = x + 1 in ... end. The first Expr is a function.
 
-            | Fun Variable Type Expr
-            | Application Expr SimpleExpr
+            | Fun a Variable Type (Expr a)
+            | Application a (Expr a) (SimpleExpr a)
 
-            | Input
+            | Input a
 
-            | SimpleExpr SimpleExpr
-            deriving (Eq, Show)
+            | SimpleExpr (SimpleExpr a)
+            deriving (Eq, Show, Functor, Foldable, Traversable)
+        
+stripExprState :: Expr a -> Expr ()
+stripExprState = fmap (const ())
+        
+stripSimpleExprState :: SimpleExpr a -> SimpleExpr ()
+stripSimpleExprState = fmap (const ())

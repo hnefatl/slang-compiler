@@ -12,11 +12,12 @@ module Interpreters
 import qualified Interpreters.Ast as A
 
 import Common
+import Lexer (Position)
 import Parser (parse)
 import TypeChecker (typecheck)
 
 type Program = String
-type Interpreter v = A.Ast -> IO (Either Error v)
+type Interpreter v = A.Ast Position -> IO (Either Error v)
 
 class ResultConvertible a where
     convert :: a -> Maybe Result

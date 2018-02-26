@@ -13,6 +13,7 @@ import System.IO (hFlush, stdout)
 import System.Random (randomIO)
 
 import Common
+import Lexer (Position)
 import qualified Interpreters.Ast as A
 import qualified Interpreters as I (Result(..), ResultConvertible, convert)
 import Interpreters.Interpreter0Monad
@@ -24,7 +25,7 @@ data Value = Unit
            | Pair Value Value
            | Inl Value
            | Inr Value
-           | Fun A.Variable A.Ast
+           | Fun A.Variable (A.Ast Position)
            deriving (Eq, Show)
 
 instance I.ResultConvertible Value where
@@ -39,45 +40,45 @@ instance I.ResultConvertible Value where
 
 type SlangInterpreter0 a = Interpreter0 A.Variable Value Error a
 
-interpret :: A.Ast -> IO (Either Error Value)
+interpret :: A.Ast Position -> IO (Either Error Value)
 interpret = runInterpreter0Monad . interpret'
 
-interpret' :: A.Ast -> SlangInterpreter0 Value
-interpret'  A.Unit               = return Unit
-interpret' (A.Integer i)         = return $ Integer i
-interpret' (A.Boolean b)         = return $ Boolean b
-interpret' (A.Variable v)        = getValue' v
-interpret' (A.Deref e)           = do
+interpret' :: A.Ast Position -> SlangInterpreter0 Value
+interpret' (A.Unit _)               = return Unit
+interpret' (A.Integer _ i)         = return $ Integer i
+interpret' (A.Boolean _ b)         = return $ Boolean b
+interpret' (A.Variable _ v)        = getValue' v
+interpret' (A.Deref _ e)           = do
                                     Ref inner <- interpret' e
                                     getValue' inner
-interpret' (A.Ref e)             = do
+interpret' (A.Ref _ e)             = do
                                     inner <- interpret' e
                                     makeRef inner
-interpret' (A.Pair l r)          = do
+interpret' (A.Pair _ l r)          = do
                                     lv <- (interpret' l)
                                     rv <- (interpret' r)
                                     return $ Pair lv rv
-interpret' (A.UnaryOp op e)      = do
+interpret' (A.UnaryOp _ op e)      = do
                                     val <- (interpret' e)
                                     interpretUOp op val
-interpret' (A.BinaryOp op l r)   = do
+interpret' (A.BinaryOp _ op l r)   = do
                                     lv <- (interpret' l)
                                     rv <- (interpret' r)
                                     interpretBOp op lv rv
-interpret' (A.Sequence es)       = do
+interpret' (A.Sequence _ es)       = do
                                     exprs <- mapM interpret' es
                                     return (last exprs)
-interpret' (A.If c l r)          = do
+interpret' (A.If _ c l r)          = do
                                     Boolean b <- interpret' c
                                     if b then interpret' l
                                     else interpret' r
-interpret' (A.Inl e)             = do
+interpret' (A.Inl _ e)             = do
                                     v <- interpret' e
                                     return (Inl v)
-interpret' (A.Inr e)             = do
+interpret' (A.Inr _ e)             = do
                                     v <- interpret' e
                                     return (Inr v)
-interpret' (A.Case e l r)        = do
+interpret' (A.Case _ e l r)        = do
                                     ev <- interpret' e
                                     case ev of
                                         Inl v   -> do
@@ -87,32 +88,32 @@ interpret' (A.Case e l r)        = do
                                                     rf <- interpret' r
                                                     apply rf v
                                         _       -> runtimeError ("Compiler Error: " ++ show e ++ " should be Inl or Inr")
-interpret' (A.Fst e)             = do
+interpret' (A.Fst _ e)             = do
                                     Pair l _ <- interpret' e
                                     return l
-interpret' (A.Snd e)             = do
+interpret' (A.Snd _ e)             = do
                                     Pair _ r <- interpret' e
                                     return r
-interpret' orig@(A.While c e)    = do
+interpret' orig@(A.While _ c e)    = do
                                     Boolean cond <- interpret' c
                                     if cond then do
                                         interpret' e
                                         interpret' orig
                                     else
                                         return Unit
-interpret' (A.Let n e1 e2)       = do
+interpret' (A.Let _ n e1 e2)       = do
                                     v <- interpret' e1
                                     local n v (interpret' e2)
-interpret' (A.LetFun n f e)      = do
+interpret' (A.LetFun _ n f e)      = do
                                     fv <- interpret' f
                                     local n fv (interpret' e) 
-interpret' (A.Fun x e)           = return $ Fun x e
-interpret' (A.Application e1 e2) = do
+interpret' (A.Fun _ x e)           = return $ Fun x e
+interpret' (A.Application _ e1 e2) = do
                                     -- Evaluate e2 first, for compatibility with Tim Griffin's slang compiler
                                     x <- interpret' e2
                                     f <- interpret' e1
                                     apply f x
-interpret' A.Input               = do
+interpret' (A.Input _)               = do
                                     liftIO (putStr "Input> ")
                                     liftIO (hFlush stdout) -- Output is line-buffered, so explicitly flush
                                     v <- liftIO readLn
@@ -149,41 +150,52 @@ apply (Fun v e) x = do
 apply f x = runtimeError ("Compiler Error: apply shouldn't have been called on " ++ show f ++ " with " ++ show x)
 
 -- This is messy, but I've not found a nicer way to do it - can't use lenses as Ast isn't Traversable
-updateVariable :: A.Variable -> A.Ast -> A.Ast -> A.Ast
-updateVariable var val tree = updateVariable' tree
+updateVariable :: A.Variable -> (Position -> A.Ast Position) -> A.Ast Position -> A.Ast Position
+updateVariable var valUpdater tree = updateVariable' tree
     where
-        updateVariable' a@(A.Variable n) = if n == var then val else a
-        updateVariable' a@A.Unit = a
-        updateVariable' a@(A.Integer _) = a
-        updateVariable' a@(A.Boolean _) = a
-        updateVariable' a@(A.Input) = a
-        updateVariable' (A.Deref e) = A.Deref (updateVariable' e)
-        updateVariable' (A.Ref e) = A.Ref (updateVariable' e)
-        updateVariable' (A.Pair l r) = A.Pair (updateVariable' l) (updateVariable' r)
-        updateVariable' (A.UnaryOp op e) = (A.UnaryOp op) (updateVariable' e)
-        updateVariable' (A.BinaryOp op l r) = (A.BinaryOp op) (updateVariable' l) (updateVariable' r)
-        updateVariable' (A.Sequence es) = A.Sequence (map updateVariable' es)
-        updateVariable' (A.If c l r) = A.If (updateVariable' c) (updateVariable' l) (updateVariable' r)
-        updateVariable' (A.Inl e) = A.Inl (updateVariable' e)
-        updateVariable' (A.Inr e) = A.Inr (updateVariable' e)
-        updateVariable' (A.Case e l r) = A.Case (updateVariable' e) (updateVariable' l) (updateVariable' r)
-        updateVariable' (A.Fst e) = A.Fst (updateVariable' e)
-        updateVariable' (A.Snd e) = A.Snd (updateVariable' e)
-        updateVariable' (A.While c e) = A.While (updateVariable' c) (updateVariable' e)
-        updateVariable' (A.Let v b e) = (A.Let v) (updateVariable' b) (updateVariable' e)
-        updateVariable' (A.LetFun v b e) = (A.LetFun v) (updateVariable' b) (updateVariable' e)
-        updateVariable' (A.Fun v e) = (A.Fun v) (updateVariable' e)
-        updateVariable' (A.Application e1 e2) = A.Application (updateVariable' e1) (updateVariable' e2)
+        updateVariable' a@(A.Variable p n) = if n == var then valUpdater p else a
+        updateVariable' a@(A.Unit _) = a
+        updateVariable' a@(A.Integer _ _) = a
+        updateVariable' a@(A.Boolean _ _) = a
+        updateVariable' a@(A.Input _) = a
+        updateVariable' (A.Deref p e) = A.Deref p (updateVariable' e)
+        updateVariable' (A.Ref p e) = A.Ref p (updateVariable' e)
+        updateVariable' (A.Pair p l r) = A.Pair p (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.UnaryOp p op e) = (A.UnaryOp p op) (updateVariable' e)
+        updateVariable' (A.BinaryOp p op l r) = (A.BinaryOp p op) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Sequence p es) = A.Sequence p (map updateVariable' es)
+        updateVariable' (A.If p c l r) = A.If p (updateVariable' c) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Inl p e) = A.Inl p (updateVariable' e)
+        updateVariable' (A.Inr p e) = A.Inr p (updateVariable' e)
+        updateVariable' (A.Case p e l r) = A.Case p (updateVariable' e) (updateVariable' l) (updateVariable' r)
+        updateVariable' (A.Fst p e) = A.Fst p (updateVariable' e)
+        updateVariable' (A.Snd p e) = A.Snd p (updateVariable' e)
+        updateVariable' (A.While p c e) = A.While p (updateVariable' c) (updateVariable' e)
+        updateVariable' (A.Let p v b e) = (A.Let p v) (updateVariable' b) (updateVariable' e)
+        updateVariable' (A.LetFun p v b e) = (A.LetFun p v) (updateVariable' b) (updateVariable' e)
+        updateVariable' (A.Fun p v e) = (A.Fun p v) (updateVariable' e)
+        updateVariable' (A.Application p e1 e2) = A.Application p (updateVariable' e1) (updateVariable' e2)
 
-valueToAst :: Value -> SlangInterpreter0 A.Ast
-valueToAst Unit = return A.Unit
-valueToAst (Integer i) = return $ A.Integer i
-valueToAst (Boolean b) = return $ A.Boolean b
-valueToAst (Ref n) = liftM A.Ref (getValueE n "Compiler Error: Value of ref not found" >>= valueToAst)
-valueToAst (Pair l r) = liftM2 A.Pair (valueToAst l) (valueToAst r)
-valueToAst (Inl l) = liftM A.Inl (valueToAst l)
-valueToAst (Inr r) = liftM A.Inr (valueToAst r)
-valueToAst (Fun x e) = return $ A.Fun x e
+valueToAst :: Value -> SlangInterpreter0 (Position -> A.Ast Position)
+valueToAst Unit = return (\p -> A.Unit p)
+valueToAst (Integer i) = return $ \p -> A.Integer p i
+valueToAst (Boolean b) = return $ \p -> A.Boolean p b
+valueToAst (Ref n) = do
+                        value <- getValueE n "Compiler Error: Value of ref not found"
+                        inner <- valueToAst value
+                        return $ \p -> A.Ref p (inner p)
+valueToAst (Pair l r) = do
+                            lt <- valueToAst l
+                            rt <- valueToAst r
+                            return $ \p -> A.Pair p (lt p) (rt p)
+valueToAst (Inl l) = do
+                        inner <- valueToAst l
+                        return $ \p -> A.Inl p (inner p)
+valueToAst (Inr r) = do
+                        inner <- valueToAst r
+                        return $ \p -> A.Inr p (inner p)
+valueToAst (Fun x e) = return $ \p -> A.Fun p x e
+
 
 makeRef :: Value -> SlangInterpreter0 Value
 makeRef v = do

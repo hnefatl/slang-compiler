@@ -134,6 +134,7 @@ data Position = Position
         row         :: Int, -- Line number
         col         :: Int  -- Column number
     }
+    deriving (Eq, Show)
 
 getPosition :: Parser Position
 getPosition = do

@@ -101,56 +101,57 @@ import Common
 
 %%
 
-Expr :: { E.Expr }
+Expr :: { E.Expr Position }
 Expr    : SimpleExpr                                            { E.SimpleExpr $1 }
-        | '-' Expr  %prec unit                                  { E.UnaryOp E.OpNeg $2 }
-        | '~' Expr  %prec unit                                  { E.UnaryOp E.OpNot $2 }
-        | Expr SimpleExpr                                       { E.Application $1 $2 }
+        | '-' Expr  %prec unit                                  {% storePosition $ \p -> E.UnaryOp p E.OpNeg $2 }
+        | '~' Expr  %prec unit                                  {% storePosition $ \p -> E.UnaryOp p E.OpNot $2 }
+        | Expr SimpleExpr                                       {% storePosition $ \p -> E.Application p $1 $2 }
             -- Unary negation has high precedence
-        | Expr '+' Expr                                         { E.ArithBinaryOp E.OpAdd $1 $3 }
-        | Expr '-' Expr                                         { E.ArithBinaryOp E.OpSub $1 $3 }
-        | Expr '*' Expr                                         { E.ArithBinaryOp E.OpMul $1 $3 }
-        | Expr '/' Expr                                         { E.ArithBinaryOp E.OpDiv $1 $3 }
-        | Expr '=' Expr                                         { E.BinaryOp E.OpEqual $1 $3 }
-        | Expr '<' Expr                                         { E.BinaryOp E.OpLess $1 $3 }
-        | Expr ':=' Expr                                        { E.BinaryOp E.OpAssign $1 $3 }
-        | Expr '&&' Expr                                        { E.BoolBinaryOp E.OpAnd $1 $3 }
-        | Expr '||' Expr                                        { E.BoolBinaryOp E.OpOr $1 $3 }
-        | begin ExprList end                                    { E.Sequence $2 }
-        | if Expr then Expr else Expr end                       { E.If $2 $4 $6 }
-        | while Expr do Expr end                                { E.While $2 $4 }
-        | fst Expr  %prec uminus                                { E.Fst $2 }
-        | snd Expr  %prec uminus                                { E.Snd $2 }
-        | inl Type Expr                                         { E.Inl $3 $2 }
-        | inr Type Expr                                         { E.Inr $3 $2 }
-        | input                                                 { E.Input }
-        | fun '(' identifier ':' Type ')' '->' Expr end         { E.Fun $3 $5 $8 }
-        | let identifier ':' Type '=' Expr in Expr end          { E.Let $2 $4 $6 $8 }
+        | Expr '+' Expr                                         {% storePosition $ \p -> E.ArithBinaryOp p E.OpAdd $1 $3 }
+        | Expr '-' Expr                                         {% storePosition $ \p -> E.ArithBinaryOp p E.OpSub $1 $3 }
+        | Expr '*' Expr                                         {% storePosition $ \p -> E.ArithBinaryOp p E.OpMul $1 $3 }
+        | Expr '/' Expr                                         {% storePosition $ \p -> E.ArithBinaryOp p E.OpDiv $1 $3 }
+        | Expr '=' Expr                                         {% storePosition $ \p -> E.BinaryOp p E.OpEqual $1 $3 }
+        | Expr '<' Expr                                         {% storePosition $ \p -> E.BinaryOp p E.OpLess $1 $3 }
+        | Expr ':=' Expr                                        {% storePosition $ \p -> E.BinaryOp p E.OpAssign $1 $3 }
+        | Expr '&&' Expr                                        {% storePosition $ \p -> E.BoolBinaryOp p E.OpAnd $1 $3 }
+        | Expr '||' Expr                                        {% storePosition $ \p -> E.BoolBinaryOp p E.OpOr $1 $3 }
+        | begin ExprList end                                    {% storePosition $ \p -> E.Sequence p $2 }
+        | if Expr then Expr else Expr end                       {% storePosition $ \p -> E.If p $2 $4 $6 }
+        | while Expr do Expr end                                {% storePosition $ \p -> E.While p $2 $4 }
+        | fst Expr  %prec uminus                                {% storePosition $ \p -> E.Fst p $2 }
+        | snd Expr  %prec uminus                                {% storePosition $ \p -> E.Snd p $2 }
+        | inl Type Expr                                         {% storePosition $ \p -> E.Inl p $3 $2 }
+        | inr Type Expr                                         {% storePosition $ \p -> E.Inr p $3 $2 }
+        | input                                                 {% storePosition $ \p -> E.Input p }
+        | fun '(' identifier ':' Type ')' '->' Expr end         {% storePosition $ \p -> E.Fun p $3 $5 $8 }
+        | let identifier ':' Type '=' Expr in Expr end          {% storePosition $ \p -> E.Let p $2 $4 $6 $8 }
 
         | let identifier '(' identifier ':' Type ')'
-                    ':' Type '=' Expr in Expr end               { E.LetFun $2 (E.Fun $4 $6 $11) $9 $13 }
+                    ':' Type '=' Expr in Expr end               {% storePosition $ \p -> E.LetFun p $2 (E.Fun p $4 $6 $11) $9 $13 }
 
+        -- Two case expressions: inl then inr, or inr then inl
         | case Expr of
                 inl '(' identifier ':' Type ')' '->' Expr
             '|' inr '(' identifier ':' Type ')' '->' Expr
-          end                                                   { E.Case $2 (E.Fun $6 $8 $11) (E.Fun $15 $17 $20)}
+          end                                                   {% storePosition $ \p -> E.Case p $2 (E.Fun p $6 $8 $11) (E.Fun p $15 $17 $20) }
         | case Expr of
                 inr '(' identifier ':' Type ')' '->' Expr
             '|' inl '(' identifier ':' Type ')' '->' Expr
-          end                                                   { E.Case $2 (E.Fun $15 $17 $20) (E.Fun $6 $8 $11) }
+          end                                                   {% storePosition $ \p -> E.Case p $2 (E.Fun p $15 $17 $20) (E.Fun p $6 $8 $11) }
 
 
-SimpleExpr :: { E.SimpleExpr }
-SimpleExpr  : unit                          { E.Unit }
-            | integer                       { E.Integer $1 }
-            | boolean                       { E.Boolean $1 }
-            | identifier                    { E.Identifier $1 }
-            | '(' Expr ')'                  { E.Expr $2 }
-            | '(' Expr ',' Expr ')'         { E.Pair $2 $4 }
-            | '!' SimpleExpr                { E.Deref $2 }
-            | ref SimpleExpr                { E.Ref $2 }
+SimpleExpr :: { E.SimpleExpr Position }
+SimpleExpr  : '(' Expr ')'                  { E.Expr $2 }
+            | unit                          {% storePosition $ \p -> E.Unit p }
+            | integer                       {% storePosition $ \p -> E.Integer p $1 }
+            | boolean                       {% storePosition $ \p -> E.Boolean p $1 }
+            | identifier                    {% storePosition $ \p -> E.Identifier p $1 }
+            | '(' Expr ',' Expr ')'         {% storePosition $ \p -> E.Pair p $2 $4 }
+            | '!' SimpleExpr                {% storePosition $ \p -> E.Deref p $2 }
+            | ref SimpleExpr                {% storePosition $ \p -> E.Ref p $2 }
 
-ExprList :: { [E.Expr] }
+ExprList :: { [E.Expr Position] }
 ExprList    : Expr                  { [$1] }
             | Expr ';' ExprList     { $1:$3 }
 
@@ -167,18 +168,21 @@ Type    : inttype           { T.Integer }
 
 {
 
+storePosition :: (Position -> t Position) -> Parser (t Position)
+storePosition e = getPosition >>= \p -> return $ e p
+
 parseError :: L.Token -> Parser a
 parseError t = do
                 Position a r c <- getPosition
                 rawError ("Parser Error (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ show t)
 
-parse :: String -> Either Error E.Expr
+parse :: String -> Either Error (E.Expr Position)
 parse s = runParser s slangParse
 
-parser :: String -> Except Error E.Expr
+parser :: String -> Except Error (E.Expr Position)
 parser = parserT
 
-parserT :: Monad m => String -> ExceptT Error m E.Expr
+parserT :: Monad m => String -> ExceptT Error m (E.Expr Position)
 parserT = ExceptT . return . parse
 
 }
