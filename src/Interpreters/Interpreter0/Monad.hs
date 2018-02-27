@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Interpreters.Interpreter0Monad
+module Interpreters.Interpreter0.Monad
 (
     Interpreter0,
     getEnvironment,

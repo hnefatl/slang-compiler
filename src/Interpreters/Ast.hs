@@ -5,7 +5,7 @@ module Interpreters.Ast
     Ast(..),
     UOp(..),
     BOp(..),
-    Variable,
+    VariableName,
     translate,
     stripState
 ) where
@@ -20,12 +20,12 @@ import qualified Parser.Expressions as E
 data UOp = Neg | Not  deriving (Eq, Show)
 data BOp = Add | Sub | Mul | Div | And | Or | Equal | Less | Assign deriving (Eq, Show)
 
-type Variable = String
+type VariableName = String
 
 data Ast a = Unit a
            | Integer a Integer
            | Boolean a Bool
-           | Variable a Variable
+           | Variable a VariableName
            | Deref a (Ast a)
            | Ref a (Ast a)
            | Pair a (Ast a) (Ast a)
@@ -39,9 +39,9 @@ data Ast a = Unit a
            | Fst a (Ast a)
            | Snd a (Ast a)
            | While a (Ast a) (Ast a)
-           | Let a Variable (Ast a) (Ast a)
-           | LetFun a Variable (Ast a) (Ast a)
-           | Fun a Variable (Ast a)
+           | Let a VariableName (Ast a) (Ast a)
+           | LetFun a VariableName (Ast a) (Ast a)
+           | Fun a VariableName (Ast a)
            | Application a (Ast a) (Ast a)
            | Input a
            deriving (Eq, Show, Functor, Foldable, Traversable)
