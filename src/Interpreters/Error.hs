@@ -5,7 +5,7 @@ module Interpreters.Error
     convertError
 ) where
 
-import qualified Interpreters.Ast as A
+import Interpreters.Ast
 import Common
 
 data Error = Error Position ErrorType
@@ -15,10 +15,10 @@ instance ErrorConvertible Error where
         "Runtime Error at (row " ++ show r ++ ", col " ++ show c ++ ", abs " ++ show a ++ "): " ++ show err
 
 data ErrorType = DivisionByZero Integer
-               | MissingVariable A.Variable
-               | FATAL_InlInrMismatch (A.Ast Position)
-               | FATAL_InvalidUOpArguments A.UOp
-               | FATAL_InvalidBOpArguments A.BOp
+               | MissingVariable VariableName
+               | FATAL_InlInrMismatch (Ast Position)
+               | FATAL_InvalidUOpArguments UOp
+               | FATAL_InvalidBOpArguments BOp
                | FATAL_InvalidApplication
                | FATAL_RefMissing
 

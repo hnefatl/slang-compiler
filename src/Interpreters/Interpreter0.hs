@@ -8,39 +8,20 @@ module Interpreters.Interpreter0
     Error
 ) where
 
-import Control.Monad (mapM, liftM, liftM2)
+import Control.Monad (mapM)
 import System.IO (hFlush, stdout)
 import System.Random (randomIO)
 
 import Common
 import Interpreters.Error
 import qualified Interpreters.Ast as A
-import qualified Interpreters as I (Result(..), ResultConvertible, Interpreter, convertResult)
-import Interpreters.Interpreter0Monad
+import Interpreters (Interpreter)
+import Interpreters.Interpreter0.Monad
+import Interpreters.Interpreter0.Values
 
-data Value = Unit
-           | Integer Integer
-           | Boolean Bool
-           | Ref A.Variable
-           | Pair Value Value
-           | Inl Value
-           | Inr Value
-           | Fun A.Variable (A.Ast Position)
-           deriving (Eq, Show)
+type SlangInterpreter0 a = Interpreter0 A.VariableName Value a
 
-instance I.ResultConvertible Value where
-    convertResult Unit        = Just $ I.Unit
-    convertResult (Integer i) = Just $ I.Integer i
-    convertResult (Boolean b) = Just $ I.Boolean b
-    convertResult (Ref _)     = Nothing
-    convertResult (Pair l r)  = liftM2 I.Pair (I.convertResult l) (I.convertResult r)
-    convertResult (Inl v)     = liftM I.Inl (I.convertResult v)
-    convertResult (Inr v)     = liftM I.Inr (I.convertResult v)
-    convertResult (Fun _ _)   = Nothing
-
-type SlangInterpreter0 a = Interpreter0 A.Variable Value a
-
-interpret :: I.Interpreter Error Value
+interpret :: Interpreter Error Value
 interpret = runInterpreter0Monad . interpret'
 
 interpret' :: A.Ast Position -> SlangInterpreter0 Value
@@ -138,7 +119,7 @@ interpretBOp _   A.Assign (Ref n) v = setValue n v >> return Unit
 interpretBOp pos op _ _ = runtimeError (Error pos $ FATAL_InvalidBOpArguments op)
 
 -- A version of Interpreter0.getValue that has a standard error message
-getValue' :: Position -> A.Variable -> SlangInterpreter0 Value
+getValue' :: Position -> A.VariableName -> SlangInterpreter0 Value
 getValue' pos k = getValueE k (Error pos $ MissingVariable k)
 
 apply :: Position -> Value -> Value -> SlangInterpreter0 Value
@@ -149,7 +130,7 @@ apply pos (Fun v e) x = do
 apply pos _ _ = runtimeError (Error pos FATAL_InvalidApplication)
 
 -- This is messy, but I've not found a nicer way to do it
-updateVariable :: A.Variable -> (Position -> A.Ast Position) -> A.Ast Position -> A.Ast Position
+updateVariable :: A.VariableName -> (Position -> A.Ast Position) -> A.Ast Position -> A.Ast Position
 updateVariable var valUpdater tree = updateVariable' tree
     where
         updateVariable' a@(A.Variable p n) = if n == var then valUpdater p else a
@@ -205,7 +186,7 @@ makeRef v = do
                 setValue refName v
                 return (Ref refName)
 
-makeUnusedRefName :: SlangInterpreter0 A.Variable
+makeUnusedRefName :: SlangInterpreter0 A.VariableName
 makeUnusedRefName = do
                         rand <- liftIO randomIO
                         let name = "$" ++ show (rand :: Int)
