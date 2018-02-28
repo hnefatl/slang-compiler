@@ -15,40 +15,42 @@ module Interpreters.Interpreter0.Monad
     liftIO -- Export liftIO from the Control.Monad.IO.Class module, as it's useful for doing IO actions in this monad
 ) where
 
-import Interpreters.Error
-
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as M
 
-type Environment k v = M.Map k v
+import Interpreters.Error
+import Interpreters.Interpreter0.Values
+import Interpreters.Ast (VariableName)
 
-newtype Interpreter0 k v a = Interpreter0
+type Environment = M.Map VariableName Value
+
+newtype Interpreter0 a = Interpreter0
     {
-        run :: StateT (Environment k v) (ExceptT Error IO) a
+        run :: StateT Environment (ExceptT Error IO) a
     }
-    deriving (Functor, Applicative, Monad, MonadIO, MonadState (Environment k v), MonadError Error)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadState Environment, MonadError Error)
 
-getEnvironment :: Interpreter0 k v (Environment k v)
+getEnvironment :: Interpreter0 Environment
 getEnvironment = get
 
-getValue :: Ord k => k -> Interpreter0 k v (Maybe v)
+getValue :: VariableName -> Interpreter0 (Maybe Value)
 getValue k = gets (M.lookup k)
 
-getValueE :: Ord k => k -> Error -> Interpreter0 k v v
+getValueE :: VariableName -> Error -> Interpreter0 Value
 getValueE k e = do
                     val <- getValue k
                     case val of
                         Just v  -> return v
                         Nothing -> throwError e
 
-setValue :: Ord k => k -> v -> Interpreter0 k v ()
+setValue :: VariableName -> Value -> Interpreter0 ()
 setValue k v = modify (M.insert k v)
 
-removeValue :: Ord k => k -> Interpreter0 k v ()
+removeValue :: VariableName -> Interpreter0 ()
 removeValue k = modify (M.delete k)
 
-local :: Ord k => k -> v -> Interpreter0 k v a -> Interpreter0 k v a
+local :: VariableName -> Value -> Interpreter0 a -> Interpreter0 a
 local k v a = do
                 existingValue <- getValue k
                 setValue k v
@@ -58,8 +60,8 @@ local k v a = do
                     Nothing   -> removeValue k
                 return res
 
-runtimeError :: Error -> Interpreter0 k v a
+runtimeError :: Error -> Interpreter0 a
 runtimeError = throwError
 
-runInterpreter0Monad :: Interpreter0 k v a -> IO (Either Error a)
+runInterpreter0Monad :: Interpreter0 a -> IO (Either Error a)
 runInterpreter0Monad a = runExceptT $ evalStateT (run a) M.empty
